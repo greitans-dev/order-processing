@@ -70,10 +70,10 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task Resubmit_with_blank_order_number_returns_404()
+    public async Task Resubmit_with_blank_order_number_returns_400()
     {
         var response = await _client.PostAsync("/api/v1/orders/%20/resubmit", null);
-        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
