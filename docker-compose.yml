@@ -1,0 +1,7 @@
+services:
+  order-processing:
+    build:
+      context: .
+      dockerfile: backend/src/OrderProcessing.Api/Dockerfile
+    ports:
+      - "8080:8080"

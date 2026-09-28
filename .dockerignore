@@ -1,0 +1,9 @@
+**/bin
+**/obj
+**/node_modules
+frontend/.next
+frontend/out
+.git
+.local
+.superpowers
+docs

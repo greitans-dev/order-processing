@@ -10,7 +10,11 @@ files here.
 
 ## Current state
 
-The repo is pre-implementation: it holds only `task.md` (the spec) and `plan.md` (the agreed implementation plan, including design decisions already confirmed with the user) in the `.local/` directory. No source code, build files, or README exist yet. Read both before building anything, and update this file with real commands once the projects exist. The layout and commands below are the planned ones from `plan.md`, not yet verified.
+The backend and frontend are implemented and verified (backend: `dotnet test backend/OrderProcessing.sln`; frontend: `cd frontend && pnpm test`; `docker compose up --build` serves UI and API on port 8080). The spec is `task.md` and the plan is `plan.md`, both in the git-ignored `.local/` directory. The layout and commands below match the code. User-facing docs live in `docs/`, linked from `README.md`.
+
+Notes:
+- The frontend was scaffolded by `create-next-app`, which added `frontend/AGENTS.md` and `frontend/CLAUDE.md`. Next.js 16 docs ship in `frontend/node_modules/next/dist/docs/`.
+- The frontend runs with `NEXT_PUBLIC_API_BASE_URL=http://localhost:5080 pnpm dev` against the local backend.
 
 ## Committing the changes
 
@@ -25,7 +29,7 @@ When working on multi-step or multi-phase changes, try to commit the changes in 
 
 An order-submission web app for "XYZ Inc.": a Next.js frontend (TypeScript, client components only, Jest) and an ASP.NET Core backend (.NET 10, C#, xUnit + Moq + Shouldly + NetArchTest) that forwards orders to one of several payment gateways and returns a receipt or a user-displayable error. It must work out of the box with mocked gateways, with no API keys.
 
-## Planned layout and commands
+## Layout and commands
 
 - `backend/` holds `OrderProcessing.sln` and `src/{Domain,Application,Infrastructure,Api}`, with matching `tests/*.Tests` projects. Architecture tests live in their own project, `OrderProcessing.ArchitectureTests`, as the spec requires.
 - `frontend/` holds the Next.js app under `src/{app,components,context,services,types,validation}`.
