@@ -43,6 +43,7 @@ public sealed class OrdersController(OrderProcessingService service) : Controlle
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Resubmit(string orderNumber, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(orderNumber)) return NotFound();
         try
         {
             return ToActionResult(await service.ResubmitOrderAsync(new OrderNumber(orderNumber), ct));
