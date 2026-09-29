@@ -1,7 +1,7 @@
 name: SonarQube
 
 # Analyzes code quality and publishes test coverage (backend and frontend) to SonarQube on every push to main.
-# Required repository secrets: SONAR_TOKEN, SONAR_HOST_URL. Optional repository variable: SONAR_PROJECT_KEY.
+# Required repository secrets: SONAR_TOKEN, SONAR_HOST_URL. Required repository variable: SONAR_PROJECT_KEY.
 # See docs/ci.md.
 
 on:
@@ -23,15 +23,16 @@ jobs:
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'order-processing' }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }} # a variable, not a secret: secrets are masked in all log output
     steps:
       - name: Check SonarQube configuration
         run: |
           missing=""
           [ -z "$SONAR_TOKEN" ] && missing="$missing SONAR_TOKEN"
           [ -z "$SONAR_HOST_URL" ] && missing="$missing SONAR_HOST_URL"
+          [ -z "$SONAR_PROJECT_KEY" ] && missing="$missing SONAR_PROJECT_KEY"
           if [ -n "$missing" ]; then
-            echo "::error::Missing repository secret(s):$missing. See docs/ci.md."
+            echo "::error::Missing repository secret(s)/variable(s):$missing. See docs/ci.md."
             exit 1
           fi
 

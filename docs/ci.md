@@ -25,9 +25,13 @@ Repository settings (Settings, Secrets and variables, Actions):
 |---|---|---|
 | Secret | `SONAR_TOKEN` | An analysis token for the project (SonarQube: My Account, Security) |
 | Secret | `SONAR_HOST_URL` | Base URL of the server, for example `https://sonarqube.example.com` |
-| Variable (optional) | `SONAR_PROJECT_KEY` | Project key in SonarQube. Defaults to `order-processing` |
+| Variable | `SONAR_PROJECT_KEY` | Key of the project in SonarQube |
 
-Create the project in SonarQube first (manually, with the same key) so the token can analyze it.
+The key is a variable, not a secret, on purpose: it is not sensitive, and GitHub masks every occurrence of a secret's
+value in the logs, which would hide parts of ordinary log output (for example runner paths that contain it).
+
+All three are required. The workflow fails in its first step, naming the missing ones. Create the project in SonarQube
+first, with the same key, so the token can analyze it.
 
 ## Reproducing the coverage locally
 
