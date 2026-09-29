@@ -12,6 +12,9 @@ are the source of truth for schemas. Descriptions in the OpenAPI document come f
 | `GET` | `/api/v1/payment-gateways` | Available gateways (`id`, `name`) | `200` |
 | `GET` | `/api/v1/currencies` | Supported currencies (`code`, `name`) | `200` |
 
+The API has no authentication. The `userId` is supplied by the caller and is not verified (see
+[Scope and non-goals](architecture.md#scope-and-non-goals)).
+
 ## Idempotency key
 
 `POST /api/v1/orders` needs an `Idempotency-Key` header: any non-blank string of at most 255 characters without control

@@ -56,9 +56,9 @@ Clean Architecture / DDD with strict inward dependencies: `Domain → nothing`, 
 **Logging.** Application services log through `ILogger<T>` with `[LoggerMessage]` source-generated methods. Never log an order description or full payloads. Gateway calls are logged centrally in `OrderProcessingService`, not in the gateway implementations. `UseExceptionHandler` + `AddProblemDetails` turn unhandled exceptions into logged `problem+json` 500s. The Docker image logs JSON (`Logging__Console__FormatterName=json`); keep `IncludeScopes` set under both `Logging:Console` and `Logging:Console:FormatterOptions` in `appsettings.json`, because a named formatter ignores the former (that is what dropped the trace id from the JSON logs).
 
 **Other confirmed decisions:**
-- Persistence is the repository interface with an in-memory singleton (`ConcurrentDictionary`) implementation.
+- Persistence is the repository interface with an in-memory singleton (`ConcurrentDictionary`) implementation. Durable persistence is intentionally out of scope (see `docs/architecture.md`, "Scope and non-goals"), so do not add a database unprompted.
 - `Money` carries a currency code. Only `EUR` is supported, via a static `SupportedCurrencies` allow-list. Currency is a selectable field in the payload and UI.
-- Auth is simulated on the frontend only (a `userId` in localStorage). The backend trusts the `UserId` it is sent.
+- Auth is simulated on the frontend only (a `userId` in localStorage). The backend trusts the `UserId` it is sent. Real authentication is intentionally out of scope (same section), so do not add it unprompted.
 - Application DTOs stay distinct from the Api's wire contracts (`Api/Contracts/V1`), and `OrderContractMapper` converts between them.
 - `SubmitOrderRequest` uses data annotations that mirror the frontend validation (required fields, amount > 0, description max 500).
 

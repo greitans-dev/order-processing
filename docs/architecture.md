@@ -72,11 +72,34 @@ Scopes are configured twice in `appsettings.json` on purpose. A named formatter 
 `Logging:Console:FormatterOptions:IncludeScopes`; the older `Logging:Console:IncludeScopes` only applies when no
 formatter is named. `LoggingConfigurationTests` guards the JSON and simple formatters.
 
-### Known limitations
+## Scope and non-goals
+
+Real authentication and durable persistence were left out of scope on purpose. The task is an order-submission flow
+that works out of the box with mocked gateways, so the app needs no identity provider, no database and no secrets. Both
+gaps are isolated behind narrow seams, so they can be closed without reworking the design.
+
+### Authentication
+
+- **What exists:** the frontend "signs in" with any user id, which `UserContext` keeps in `localStorage`. The backend has
+  no authentication or authorization. It trusts the `userId` in the submit payload and in `GET /orders?userId=`.
+- **Consequences:** any caller can submit orders as, and read the order history of, any user. Idempotency keys are
+  scoped to the `userId`, so they are only as trustworthy as that value.
+- **To add it:** authenticate requests on the API, take the user id from the token instead of the payload and query
+  string, authorize `GET /orders` to the caller's own orders, and replace the `localStorage` login in the frontend.
+
+### Persistence
+
+- **What exists:** `InMemoryOrderRepository`, a singleton `ConcurrentDictionary`, is the only `IOrderRepository`.
+  `OrderNumberLockRegistry` holds its locks in process memory.
+- **Consequences:** orders and idempotency keys are lost on restart. The lock is process-local, so the no-double-charge
+  guarantee holds for a single API instance only.
+- **To add it:** implement `IOrderRepository` in `Infrastructure.Persistence` (the only place the architecture tests
+  allow it) with unique constraints on the order number and on `(UserId, IdempotencyKey)`. Replace the process-local
+  lock with a distributed lock or database-level concurrency control, and decide how long idempotency keys live.
+
+## Known limitations
 
 - The lock is process-local. It does not prevent a double charge if the API is scaled to several instances.
 - The lock dictionary grows with each distinct order number and idempotency key for the life of the process.
 - Idempotency keys never expire. They live as long as the order does, that is until restart.
-- `GET /api/v1/orders?userId=` has no authorization. Auth is simulated in the frontend and the backend trusts the
-  `userId` it receives.
-- Persistence is in memory, so orders are lost on restart.
+- The limitations that come from the missing authentication and persistence are described above.

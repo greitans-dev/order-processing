@@ -56,6 +56,12 @@ Sign in with any user ID. A mock gateway approves amounts below 10,000.00 and de
 `9999.99` succeeds and `10000.00` fails. Failed orders can be resubmitted from the order history; resubmitting a paid
 order never charges again.
 
+## Scope
+
+Real authentication and durable persistence are intentionally out of scope. Sign-in is simulated in the browser and the
+API trusts the user ID it receives. Orders are kept in memory, so they are lost when the API restarts. See
+[Scope and non-goals](docs/architecture.md#scope-and-non-goals).
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
