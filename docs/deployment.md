@@ -1,6 +1,6 @@
 # Deployment
 
-`docker compose up --build` builds and runs everything in one container, exposing one port (`8080`).
+`docker compose up --build` builds and runs everything in one container, exposing one port (`8080`) and binds to address `127.0.0.1`.
 
 ## Design
 
