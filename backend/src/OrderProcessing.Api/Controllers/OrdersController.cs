@@ -15,16 +15,39 @@ namespace OrderProcessing.Api.Controllers;
 [Route("api/v{version:apiVersion}/orders")]
 public sealed class OrdersController(OrderProcessingService service) : ControllerBase
 {
-    /// <summary>Submits a new order and attempts payment.</summary>
+    private const string IdempotencyKeyHeader = "Idempotency-Key";
+
+    /// <summary>
+    /// Submits a new order and attempts payment. Repeating a request with the same <c>Idempotency-Key</c> and
+    /// payload never creates a second order or a second charge; it returns the original outcome.
+    /// </summary>
     [HttpPost]
     [ProducesResponseType<OrderReceiptResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<OrderErrorResponse>(StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Submit(SubmitOrderRequest request, CancellationToken ct)
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Submit(
+        SubmitOrderRequest request,
+        [FromHeader(Name = IdempotencyKeyHeader), Required, MaxLength(IdempotencyKey.MaxLength)] string idempotencyKey,
+        CancellationToken ct)
     {
+        IdempotencyKey key;
         try
         {
-            return ToActionResult(await service.SubmitNewOrderAsync(request.ToCommand(), ct));
+            key = new IdempotencyKey(idempotencyKey);
+        }
+        catch (ArgumentException ex)
+        {
+            return Invalid(IdempotencyKeyHeader, ex.Message);
+        }
+
+        try
+        {
+            return ToActionResult(await service.SubmitNewOrderAsync(request.ToCommand(key), ct));
+        }
+        catch (IdempotencyKeyReuseException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status409Conflict, title: "Idempotency key conflict");
         }
         catch (UnknownPaymentGatewayException ex)
         {

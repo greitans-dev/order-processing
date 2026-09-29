@@ -24,8 +24,9 @@ public class OrderProcessingServiceTests
         _sut = new OrderProcessingService(_repository, registry.Object, new OrderNumberLockRegistry());
     }
 
-    private static SubmitOrderCommand Command(decimal amount = 100m, string gateway = "test-gw", string currency = "EUR") =>
-        new("user-1", amount, currency, gateway, "desc");
+    private static SubmitOrderCommand Command(decimal amount = 100m, string gateway = "test-gw", string currency = "EUR",
+        string? key = null) =>
+        new("user-1", amount, currency, gateway, "desc", new IdempotencyKey(key ?? Guid.NewGuid().ToString()));
 
     private void GatewaySucceeds() =>
         _gateway.Setup(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()))
@@ -165,6 +166,98 @@ public class OrderProcessingServiceTests
         results.Count(r => r.Outcome == OrderProcessingOutcome.AlreadyPaid).ShouldBe(4);
         results.Select(r => r.Receipt!.PaymentConfirmation).Distinct().ShouldBe(["CONF-X"]);
         _repository.All.Single().Status.ShouldBe(OrderStatus.Paid);
+    }
+
+    [Fact]
+    public async Task Submit_with_same_key_twice_creates_one_order_and_charges_once()
+    {
+        GatewaySucceeds();
+
+        var first = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+        var second = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+
+        first.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
+        second.Outcome.ShouldBe(OrderProcessingOutcome.AlreadyPaid);
+        second.OrderNumber.ShouldBe(first.OrderNumber);
+        second.Receipt.ShouldBe(first.Receipt);
+        _repository.All.Count.ShouldBe(1);
+        _gateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Submit_replay_of_failed_order_returns_same_failure_without_charging_again()
+    {
+        GatewayDeclines();
+
+        var first = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+        var second = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+
+        second.Outcome.ShouldBe(OrderProcessingOutcome.Failed);
+        second.OrderNumber.ShouldBe(first.OrderNumber);
+        second.Error.ShouldBe(first.Error);
+        _repository.All.Count.ShouldBe(1);
+        _gateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Submit_replay_after_successful_resubmit_returns_the_receipt()
+    {
+        GatewayDeclines();
+        var failed = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+        GatewaySucceeds();
+        await _sut.ResubmitOrderAsync(new OrderNumber(failed.OrderNumber), default);
+
+        var replay = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+
+        replay.Outcome.ShouldBe(OrderProcessingOutcome.AlreadyPaid);
+        replay.OrderNumber.ShouldBe(failed.OrderNumber);
+    }
+
+    [Fact]
+    public async Task Submit_with_same_key_and_different_payload_throws_and_does_not_charge()
+    {
+        GatewaySucceeds();
+        await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+        _gateway.Invocations.Clear();
+
+        await Should.ThrowAsync<IdempotencyKeyReuseException>(() =>
+            _sut.SubmitNewOrderAsync(Command(101m, key: "k1"), default));
+
+        _repository.All.Count.ShouldBe(1);
+        _gateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Same_key_for_different_users_is_independent()
+    {
+        GatewaySucceeds();
+
+        var a = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+        var b = await _sut.SubmitNewOrderAsync(Command(key: "k1") with { UserId = "other" }, default);
+
+        b.OrderNumber.ShouldNotBe(a.OrderNumber);
+        b.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
+        _repository.All.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Concurrent_submits_with_same_key_charge_the_gateway_exactly_once()
+    {
+        _gateway.Setup(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                await Task.Delay(100);
+                return PaymentResult.Success("CONF-X");
+            });
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 5)
+            .Select(_ => Task.Run(() => _sut.SubmitNewOrderAsync(Command(key: "k1"), default))));
+
+        _gateway.Verify(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        results.Count(r => r.Outcome == OrderProcessingOutcome.Paid).ShouldBe(1);
+        results.Count(r => r.Outcome == OrderProcessingOutcome.AlreadyPaid).ShouldBe(4);
+        results.Select(r => r.OrderNumber).Distinct().Count().ShouldBe(1);
+        _repository.All.Count.ShouldBe(1);
     }
 
     [Fact]

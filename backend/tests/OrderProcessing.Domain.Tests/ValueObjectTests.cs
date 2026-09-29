@@ -28,4 +28,19 @@ public class ValueObjectTests
     [InlineData(" ")]
     public void PaymentGatewayId_rejects_blank(string value) =>
         Should.Throw<ArgumentException>(() => new PaymentGatewayId(value));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("has\nnewline")]
+    public void IdempotencyKey_rejects_blank_or_control_characters(string value) =>
+        Should.Throw<ArgumentException>(() => new IdempotencyKey(value));
+
+    [Fact]
+    public void IdempotencyKey_rejects_over_255_characters() =>
+        Should.Throw<ArgumentException>(() => new IdempotencyKey(new string('a', 256)));
+
+    [Fact]
+    public void IdempotencyKey_accepts_255_characters() =>
+        new IdempotencyKey(new string('a', 255)).Value.Length.ShouldBe(255);
 }

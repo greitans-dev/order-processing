@@ -1,14 +1,15 @@
 using OrderProcessing.Api.Contracts.V1;
 using OrderProcessing.Application.Abstractions;
 using OrderProcessing.Application.Orders;
+using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
 
 namespace OrderProcessing.Api.Mapping;
 
 public static class OrderContractMapper
 {
-    public static SubmitOrderCommand ToCommand(this SubmitOrderRequest r) =>
-        new(r.UserId, r.PayableAmount, r.CurrencyCode, r.PaymentGatewayId, r.Description);
+    public static SubmitOrderCommand ToCommand(this SubmitOrderRequest r, IdempotencyKey idempotencyKey) =>
+        new(r.UserId, r.PayableAmount, r.CurrencyCode, r.PaymentGatewayId, r.Description, idempotencyKey);
 
     public static OrderReceiptResponse ToResponse(this OrderReceiptDto r) =>
         new(r.OrderNumber, r.PaidAmount, r.CurrencyCode, r.PaidAtUtc, r.PaymentConfirmation);

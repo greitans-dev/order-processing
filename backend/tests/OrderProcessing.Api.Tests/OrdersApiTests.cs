@@ -14,13 +14,20 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         string currency = "EUR", string? description = "test") =>
         new { userId = user, payableAmount = amount, currencyCode = currency, paymentGatewayId = gateway, description };
 
+    private Task<HttpResponseMessage> Submit(object order, string? key = null, bool withKey = true)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/orders") { Content = JsonContent.Create(order) };
+        if (withKey) request.Headers.Add("Idempotency-Key", key ?? Guid.NewGuid().ToString());
+        return _client.SendAsync(request);
+    }
+
     private static async Task<JsonElement> Json(HttpResponseMessage r) =>
         (await r.Content.ReadFromJsonAsync<JsonElement>());
 
     [Fact]
     public async Task Submit_valid_order_returns_200_with_receipt()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/orders", Order(99.90m));
+        var response = await Submit(Order(99.90m));
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var body = await Json(response);
@@ -34,7 +41,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     [Fact]
     public async Task Submit_at_decline_limit_returns_422_with_order_number_and_message()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/orders", Order(10000.00m, gateway: "mock-beta"));
+        var response = await Submit(Order(10000.00m, gateway: "mock-beta"));
 
         response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         var body = await Json(response);
@@ -51,14 +58,14 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     [InlineData(10, "mock-alpha", "")]
     public async Task Submit_invalid_order_returns_400(decimal amount, string gateway, string currency)
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/orders", Order(amount, gateway: gateway, currency: currency));
+        var response = await Submit(Order(amount, gateway: gateway, currency: currency));
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Submit_with_too_long_description_returns_400()
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/orders", Order(10m, description: new string('x', 501)));
+        var response = await Submit(Order(10m, description: new string('x', 501)));
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
@@ -79,7 +86,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     [Fact]
     public async Task Resubmit_failed_order_is_declined_again_with_same_order_number()
     {
-        var first = await Json(await _client.PostAsJsonAsync("/api/v1/orders", Order(20000m)));
+        var first = await Json(await Submit(Order(20000m)));
         var number = first.GetProperty("orderNumber").GetString();
 
         var response = await _client.PostAsync($"/api/v1/orders/{number}/resubmit", null);
@@ -91,7 +98,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     [Fact]
     public async Task Resubmit_paid_order_returns_same_receipt()
     {
-        var first = await Json(await _client.PostAsJsonAsync("/api/v1/orders", Order(15m)));
+        var first = await Json(await Submit(Order(15m)));
         var number = first.GetProperty("orderNumber").GetString();
 
         var response = await _client.PostAsync($"/api/v1/orders/{number}/resubmit", null);
@@ -108,8 +115,8 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     public async Task List_orders_by_user_includes_submission_with_status()
     {
         var user = $"user-{Guid.NewGuid():N}";
-        await _client.PostAsJsonAsync("/api/v1/orders", Order(10m, user: user));
-        await _client.PostAsJsonAsync("/api/v1/orders", Order(50000m, user: user));
+        await Submit(Order(10m, user: user));
+        await Submit(Order(50000m, user: user));
 
         var response = await _client.GetAsync($"/api/v1/orders?userId={user}");
 
@@ -118,6 +125,69 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         items.Count.ShouldBe(2);
         items.Select(i => i.GetProperty("status").GetString()).ShouldBe(["Paid", "Failed"], ignoreOrder: true);
         items.All(i => i.GetProperty("currencyCode").GetString() == "EUR").ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Submit_without_idempotency_key_returns_400()
+    {
+        var response = await Submit(Order(10m), withKey: false);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("bad\tkey")]
+    public async Task Submit_with_invalid_idempotency_key_returns_400(string key) =>
+        (await Submit(Order(10m), key)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+    [Fact]
+    public async Task Submit_with_too_long_idempotency_key_returns_400() =>
+        (await Submit(Order(10m), new string('k', 256))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+    [Fact]
+    public async Task Repeated_submit_with_same_key_returns_same_receipt_and_creates_one_order()
+    {
+        var user = $"idem-{Guid.NewGuid()}";
+        var key = Guid.NewGuid().ToString();
+
+        var first = await Submit(Order(30m, user: user), key);
+        var second = await Submit(Order(30m, user: user), key);
+
+        first.StatusCode.ShouldBe(HttpStatusCode.OK);
+        second.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var firstBody = await Json(first);
+        var secondBody = await Json(second);
+        secondBody.GetProperty("orderNumber").GetString().ShouldBe(firstBody.GetProperty("orderNumber").GetString());
+        secondBody.GetProperty("paymentConfirmation").GetString()
+            .ShouldBe(firstBody.GetProperty("paymentConfirmation").GetString());
+        (await Json(await _client.GetAsync($"/api/v1/orders?userId={user}"))).GetArrayLength().ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Repeated_declined_submit_with_same_key_returns_same_422_order_number()
+    {
+        var key = Guid.NewGuid().ToString();
+
+        var first = await Json(await Submit(Order(20000m), key));
+        var secondResponse = await Submit(Order(20000m), key);
+
+        secondResponse.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await Json(secondResponse)).GetProperty("orderNumber").GetString()
+            .ShouldBe(first.GetProperty("orderNumber").GetString());
+    }
+
+    [Fact]
+    public async Task Same_key_with_different_payload_returns_409()
+    {
+        var user = $"idem-{Guid.NewGuid()}";
+        var key = Guid.NewGuid().ToString();
+        await Submit(Order(30m, user: user), key);
+
+        var response = await Submit(Order(31m, user: user), key);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await Json(await _client.GetAsync($"/api/v1/orders?userId={user}"))).GetArrayLength().ShouldBe(1);
     }
 
     [Fact]

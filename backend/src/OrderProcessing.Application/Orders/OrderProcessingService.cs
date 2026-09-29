@@ -13,8 +13,21 @@ public sealed class OrderProcessingService(
     {
         var gatewayId = new PaymentGatewayId(command.PaymentGatewayId);
         gatewayRegistry.Resolve(gatewayId); // fail fast: never persist an order for an unknown gateway
-        var order = Order.Create(command.UserId, Money.Of(command.PayableAmount, command.CurrencyCode),
-            gatewayId, command.Description);
+        var amount = Money.Of(command.PayableAmount, command.CurrencyCode);
+
+        using var _ = await locks.AcquireAsync(command.UserId, command.IdempotencyKey, ct);
+        var existing = await repository.FindByIdempotencyKeyAsync(command.UserId, command.IdempotencyKey, ct);
+        if (existing is not null)
+        {
+            if (!existing.MatchesRequest(command.UserId, amount, gatewayId, command.Description))
+                throw new IdempotencyKeyReuseException(command.IdempotencyKey);
+            // Replay: a failed order is only retried through resubmit, never by repeating the key.
+            return existing.Status == OrderStatus.Failed
+                ? OrderProcessingResult.Failure(existing.OrderNumber.Value, existing.FailureReason!)
+                : await ProcessPaymentAsync(existing.OrderNumber, ct);
+        }
+
+        var order = Order.Create(command.UserId, command.IdempotencyKey, amount, gatewayId, command.Description);
         await repository.AddAsync(order, ct);
         return await ProcessPaymentAsync(order.OrderNumber, ct);
     }

@@ -16,6 +16,9 @@ internal sealed class FakeOrderRepository : IOrderRepository
     public Task<IReadOnlyList<Order>> FindByUserIdAsync(string userId, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<Order>>(_orders.Values.Where(o => o.UserId == userId).ToList());
 
+    public Task<Order?> FindByIdempotencyKeyAsync(string userId, IdempotencyKey key, CancellationToken ct) =>
+        Task.FromResult(_orders.Values.FirstOrDefault(o => o.UserId == userId && o.IdempotencyKey == key));
+
     public Task AddAsync(Order order, CancellationToken ct)
     {
         _orders[order.OrderNumber.Value] = order;

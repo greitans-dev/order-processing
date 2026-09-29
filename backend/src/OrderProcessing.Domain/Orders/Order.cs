@@ -4,11 +4,12 @@ namespace OrderProcessing.Domain.Orders;
 
 public sealed class Order
 {
-    private Order(OrderNumber orderNumber, string userId, Money payableAmount,
+    private Order(OrderNumber orderNumber, string userId, IdempotencyKey idempotencyKey, Money payableAmount,
         PaymentGatewayId paymentGatewayId, string? description)
     {
         OrderNumber = orderNumber;
         UserId = userId;
+        IdempotencyKey = idempotencyKey;
         PayableAmount = payableAmount;
         PaymentGatewayId = paymentGatewayId;
         Description = description;
@@ -17,6 +18,7 @@ public sealed class Order
 
     public OrderNumber OrderNumber { get; }
     public string UserId { get; }
+    public IdempotencyKey IdempotencyKey { get; }
     public Money PayableAmount { get; }
     public PaymentGatewayId PaymentGatewayId { get; }
     public string? Description { get; }
@@ -24,12 +26,20 @@ public sealed class Order
     public Receipt? Receipt { get; private set; }
     public string? FailureReason { get; private set; }
 
-    public static Order Create(string userId, Money payableAmount, PaymentGatewayId paymentGatewayId,
-        string? description)
+    public static Order Create(string userId, IdempotencyKey idempotencyKey, Money payableAmount,
+        PaymentGatewayId paymentGatewayId, string? description)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
-        return new Order(OrderNumber.New(), userId, payableAmount, paymentGatewayId, description);
+        ArgumentNullException.ThrowIfNull(idempotencyKey);
+        return new Order(OrderNumber.New(), userId, idempotencyKey, payableAmount, paymentGatewayId, description);
     }
+
+    public bool MatchesRequest(string userId, Money payableAmount, PaymentGatewayId paymentGatewayId,
+        string? description) =>
+        UserId == userId
+        && PayableAmount == payableAmount
+        && PaymentGatewayId == paymentGatewayId
+        && Description == description;
 
     public void MarkPaid(Receipt receipt)
     {

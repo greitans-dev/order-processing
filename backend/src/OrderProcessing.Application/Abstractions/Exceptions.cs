@@ -13,3 +13,9 @@ public sealed class OrderNotFoundException(OrderNumber orderNumber)
 {
     public OrderNumber OrderNumber { get; } = orderNumber;
 }
+
+public sealed class IdempotencyKeyReuseException(IdempotencyKey key)
+    : Exception($"Idempotency key '{key}' was already used with a different order.")
+{
+    public IdempotencyKey Key { get; } = key;
+}

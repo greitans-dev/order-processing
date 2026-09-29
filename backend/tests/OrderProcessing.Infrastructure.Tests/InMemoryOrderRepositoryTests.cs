@@ -7,8 +7,9 @@ namespace OrderProcessing.Infrastructure.Tests;
 
 public class InMemoryOrderRepositoryTests
 {
-    private static Order NewOrder(string user = "u1") =>
-        Order.Create(user, Money.Of(10m, "EUR"), new PaymentGatewayId("mock-alpha"), null);
+    private static Order NewOrder(string user = "u1", string? key = null) =>
+        Order.Create(user, new IdempotencyKey(key ?? Guid.NewGuid().ToString()), Money.Of(10m, "EUR"),
+            new PaymentGatewayId("mock-alpha"), null);
 
     [Fact]
     public async Task Add_then_find_roundtrips()
@@ -51,5 +52,27 @@ public class InMemoryOrderRepositoryTests
 
         (await repo.FindByUserIdAsync("a", default)).Count.ShouldBe(2);
         (await repo.FindByUserIdAsync("zzz", default)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task FindByIdempotencyKey_returns_the_order_for_that_user_and_key()
+    {
+        var repo = new InMemoryOrderRepository();
+        var order = NewOrder("a", "k1");
+        await repo.AddAsync(order, default);
+        await repo.AddAsync(NewOrder("b", "k1"), default);
+
+        (await repo.FindByIdempotencyKeyAsync("a", new IdempotencyKey("k1"), default)).ShouldBeSameAs(order);
+        (await repo.FindByIdempotencyKeyAsync("a", new IdempotencyKey("other"), default)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Add_with_duplicate_idempotency_key_for_same_user_throws()
+    {
+        var repo = new InMemoryOrderRepository();
+        await repo.AddAsync(NewOrder("a", "k1"), default);
+
+        await Should.ThrowAsync<InvalidOperationException>(() => repo.AddAsync(NewOrder("a", "k1"), default));
+        (await repo.FindByUserIdAsync("a", default)).Count.ShouldBe(1);
     }
 }
