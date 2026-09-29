@@ -35,10 +35,25 @@ Submit and resubmit both run through `OrderProcessingService.ProcessPaymentAsync
 `Order.MarkPaid` and `Order.MarkFailed` throw if the order is already `Paid`, which is the domain half of the
 guarantee. Resubmission reuses the same order number. Two concurrent resubmits therefore call the gateway once.
 
+New submissions are made idempotent by a client-generated `Idempotency-Key` (the `IdempotencyKey` value object,
+stored on the `Order`). It is separate from the order number, which is server-generated and unknown to the client
+when a request has to be retried. `SubmitNewOrderAsync` works as follows:
+
+1. Take a lock on `(userId, key)` from the same `OrderNumberLockRegistry`.
+2. Look the order up with `IOrderRepository.FindByIdempotencyKeyAsync`.
+3. If none exists, create the order and process it. `InMemoryOrderRepository` also enforces key uniqueness per user.
+4. If one exists and `Order.MatchesRequest` is false, throw `IdempotencyKeyReuseException` (HTTP 409).
+5. Otherwise replay: a `Failed` order returns its stored failure without calling the gateway, anything else goes
+   through `ProcessPaymentAsync`, which returns the receipt for a `Paid` order.
+
+The `(userId, key)` lock is always taken before the order-number lock, and resubmit only takes the latter, so the two
+cannot deadlock.
+
 ### Known limitations
 
 - The lock is process-local. It does not prevent a double charge if the API is scaled to several instances.
-- The lock dictionary grows with each distinct order number for the life of the process.
+- The lock dictionary grows with each distinct order number and idempotency key for the life of the process.
+- Idempotency keys never expire. They live as long as the order does, that is until restart.
 - `GET /api/v1/orders?userId=` has no authorization. Auth is simulated in the frontend and the backend trusts the
   `userId` it receives.
 - Persistence is in memory, so orders are lost on restart.

@@ -51,7 +51,7 @@ Clean Architecture / DDD with strict inward dependencies: `Domain → nothing`, 
 - If the order is already `Paid`, it returns the existing receipt without calling the gateway.
 - `Order.MarkPaid` and `Order.MarkFailed` throw if the order is already `Paid`, which is the domain half of the guarantee.
 
-Resubmission reuses the same `OrderNumber`. The lock is process-local, a documented limitation. The key tests are "resubmitting a Paid order never calls `ChargeAsync`" and "two concurrent resubmits call `ChargeAsync` exactly once".
+`POST /orders` requires an `Idempotency-Key` header (client-generated, max 255 chars, scoped per `UserId`). It is a value object (`IdempotencyKey`) stored on the `Order`, and it is deliberately separate from the server-generated `OrderNumber`, which is unknown to the client until the response arrives. `SubmitNewOrderAsync` takes a lock on `(UserId, key)` and looks the order up by key. The same key with the same payload never creates a second order: it replays the outcome (`Paid` -> receipt, `Failed` -> the original 422 with the same `OrderNumber`, so a failed payment is retried through resubmit). The same key with a different payload throws `IdempotencyKeyReuseException`, which the API maps to 409. Resubmission reuses the same `OrderNumber`. The lock is process-local, a documented limitation. The key tests are "resubmitting a Paid order never calls `ChargeAsync`" and "two concurrent resubmits call `ChargeAsync` exactly once", plus the same-key equivalents: "a repeated submit with the same key charges once" and "concurrent submits with the same key charge once".
 
 **Other confirmed decisions:**
 - Persistence is the repository interface with an in-memory singleton (`ConcurrentDictionary`) implementation.
@@ -61,7 +61,7 @@ Resubmission reuses the same `OrderNumber`. The lock is process-local, a documen
 - `SubmitOrderRequest` uses data annotations that mirror the frontend validation (required fields, amount > 0, description max 500).
 
 **API.** It is versioned (`Asp.Versioning.*`, routes `api/v1/...`). Endpoints:
-- `POST /orders` returns 200 with a receipt, or 422 with an error that always includes `OrderNumber`.
+- `POST /orders` requires the `Idempotency-Key` header (400 if missing or invalid). It returns 200 with a receipt, 422 with an error that always includes `OrderNumber`, or 409 if the key was already used with a different payload.
 - `POST /orders/{orderNumber}/resubmit`
 - `GET /orders?userId=`
 - `GET /payment-gateways`
