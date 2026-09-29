@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Moq;
 using OrderProcessing.Application.Abstractions;
 using OrderProcessing.Application.Orders;
@@ -10,6 +12,7 @@ namespace OrderProcessing.Application.Tests;
 public class OrderProcessingServiceTests
 {
     private readonly FakeOrderRepository _repository = new();
+    private readonly FakeLogger<OrderProcessingService> _logger = new();
     private readonly Mock<IPaymentGateway> _gateway = new();
     private readonly OrderProcessingService _sut;
 
@@ -21,7 +24,7 @@ public class OrderProcessingServiceTests
             .Returns(_gateway.Object);
         registry.Setup(r => r.Resolve(It.Is<PaymentGatewayId>(id => id.Value != "test-gw")))
             .Throws<UnknownPaymentGatewayException>(() => new UnknownPaymentGatewayException("nope"));
-        _sut = new OrderProcessingService(_repository, registry.Object, new OrderNumberLockRegistry());
+        _sut = new OrderProcessingService(_repository, registry.Object, new OrderNumberLockRegistry(), _logger);
     }
 
     private static SubmitOrderCommand Command(decimal amount = 100m, string gateway = "test-gw", string currency = "EUR",
@@ -266,6 +269,111 @@ public class OrderProcessingServiceTests
         results.Count(r => r.Outcome == OrderProcessingOutcome.AlreadyPaid).ShouldBe(4);
         results.Select(r => r.OrderNumber).Distinct().Count().ShouldBe(1);
         _repository.All.Count.ShouldBe(1);
+    }
+
+    private IReadOnlyList<FakeLogRecord> Logs => _logger.Collector.GetSnapshot();
+
+    [Fact]
+    public async Task Successful_submit_logs_creation_and_charge_outcome_with_order_context()
+    {
+        GatewaySucceeds();
+
+        var result = await _sut.SubmitNewOrderAsync(Command(42.5m), default);
+
+        var created = Logs.Single(l => l.Level == LogLevel.Information && l.Message.Contains("created"));
+        created.Message.ShouldContain(result.OrderNumber);
+        created.Message.ShouldContain("user-1");
+        created.Message.ShouldContain("test-gw");
+        var succeeded = Logs.Single(l => l.Level == LogLevel.Information && l.Message.Contains("succeeded"));
+        succeeded.Message.ShouldContain(result.OrderNumber);
+        succeeded.Message.ShouldContain("test-gw");
+        Logs.ShouldAllBe(l => l.Level < LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task Declined_charge_logs_a_warning_with_the_reason()
+    {
+        GatewayDeclines();
+
+        var result = await _sut.SubmitNewOrderAsync(Command(), default);
+
+        var declined = Logs.Single(l => l.Level == LogLevel.Warning);
+        declined.Message.ShouldContain(result.OrderNumber);
+        declined.Message.ShouldContain("Declined: limit");
+    }
+
+    [Fact]
+    public async Task Replayed_submit_is_logged_without_a_second_charge()
+    {
+        GatewaySucceeds();
+        var first = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+        _logger.Collector.Clear();
+
+        await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+
+        Logs.ShouldContain(l => l.Level == LogLevel.Information && l.Message.Contains("replay")
+            && l.Message.Contains(first.OrderNumber));
+        Logs.ShouldNotContain(l => l.Message.Contains("created"));
+        Logs.ShouldNotContain(l => l.Message.Contains("Charging"));
+    }
+
+    [Fact]
+    public async Task Already_paid_resubmit_is_logged_without_calling_the_gateway()
+    {
+        GatewaySucceeds();
+        var first = await _sut.SubmitNewOrderAsync(Command(), default);
+        _logger.Collector.Clear();
+
+        await _sut.ResubmitOrderAsync(new OrderNumber(first.OrderNumber), default);
+
+        Logs.ShouldContain(l => l.Message.Contains("Resubmit requested") && l.Message.Contains(first.OrderNumber));
+        Logs.ShouldContain(l => l.Message.Contains("already paid") && l.Message.Contains(first.OrderNumber));
+        Logs.ShouldNotContain(l => l.Message.Contains("Charging"));
+    }
+
+    [Fact]
+    public async Task Key_reuse_with_a_different_payload_is_logged_as_a_warning()
+    {
+        GatewaySucceeds();
+        var first = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
+        _logger.Collector.Clear();
+
+        await Should.ThrowAsync<IdempotencyKeyReuseException>(() =>
+            _sut.SubmitNewOrderAsync(Command(101m, key: "k1"), default));
+
+        var warning = Logs.Single(l => l.Level == LogLevel.Warning);
+        warning.Message.ShouldContain("k1");
+        warning.Message.ShouldContain("user-1");
+        warning.Message.ShouldContain(first.OrderNumber);
+    }
+
+    [Fact]
+    public async Task Gateway_exception_is_logged_with_order_context_and_rethrown_leaving_the_order_pending()
+    {
+        var boom = new InvalidOperationException("gateway down");
+        _gateway.Setup(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>())).ThrowsAsync(boom);
+
+        var thrown = await Should.ThrowAsync<InvalidOperationException>(() =>
+            _sut.SubmitNewOrderAsync(Command(), default));
+
+        thrown.ShouldBeSameAs(boom);
+        var order = _repository.All.Single();
+        order.Status.ShouldBe(OrderStatus.Pending);
+        var error = Logs.Single(l => l.Level == LogLevel.Error);
+        error.Exception.ShouldBeSameAs(boom);
+        error.Message.ShouldContain(order.OrderNumber.Value);
+        error.Message.ShouldContain("test-gw");
+    }
+
+    [Fact]
+    public async Task Logs_never_contain_the_order_description()
+    {
+        GatewayDeclines();
+        await _sut.SubmitNewOrderAsync(Command(key: "k1") with { Description = "secret-note" }, default);
+        await _sut.SubmitNewOrderAsync(Command(key: "k1") with { Description = "secret-note" }, default);
+
+        Logs.ShouldNotBeEmpty();
+        Logs.ShouldNotContain(l => l.Message.Contains("secret-note"));
     }
 
     [Fact]
