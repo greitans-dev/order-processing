@@ -64,8 +64,13 @@ and any `IPaymentGateway` is covered without extra code.
 | Debug | charge started |
 
 The description and other free text are never logged. Unhandled exceptions are logged once by the exception-handler
-middleware, and clients get an `application/problem+json` 500 with a `traceId` and no details. Console scopes are on, so
-each line carries the trace id of its request. Local runs use the simple console format, the Docker image uses JSON.
+middleware, and clients get an `application/problem+json` 500 with a `traceId` and no details. Console scopes are on,
+so each line carries the trace id of its request (a `Scopes` array in JSON). Local runs use the plain text console
+format, the Docker image uses JSON.
+
+Scopes are configured twice in `appsettings.json` on purpose. A named formatter (`json`, `simple`) reads
+`Logging:Console:FormatterOptions:IncludeScopes`; the older `Logging:Console:IncludeScopes` only applies when no
+formatter is named. `LoggingConfigurationTests` guards the JSON and simple formatters.
 
 ### Known limitations
 
