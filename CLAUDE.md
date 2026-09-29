@@ -67,7 +67,7 @@ Clean Architecture / DDD with strict inward dependencies: `Domain → nothing`, 
 - `GET /payment-gateways`
 - `GET /currencies`
 
-OpenAPI comes from the built-in `AddOpenApi("v1")` (`/openapi/v1.json`). Swagger UI comes from `Swashbuckle.AspNetCore.SwaggerUi` only, with no SwaggerGen. `Program.cs` needs `public partial class Program;` for `WebApplicationFactory`.
+OpenAPI comes from the built-in `AddOpenApi("v1")` (`/openapi/v1.json`). Descriptions come from XML doc comments (`GenerateDocumentationFile` in the Api project), so every endpoint and contract needs `<summary>`, `<param>` and `<response>` comments; the `Idempotency-Key` header is explained in the remarks of `OrdersController.Submit` and completed by `IdempotencyKeyOperationTransformer`, because the generator ignores `<param>` on header parameters. Swagger UI comes from `Swashbuckle.AspNetCore.SwaggerUi` only, with no SwaggerGen. `Program.cs` needs `public partial class Program;` for `WebApplicationFactory`.
 
 **Single-origin deployment.** The frontend is built as a static export (`output: 'export'`) and copied into the API's `wwwroot/`. Kestrel serves both UI and API on one port, so no reverse proxy is needed. The multi-stage Dockerfile is at `backend/src/OrderProcessing.Api/Dockerfile`. The frontend API client uses relative URLs unless `NEXT_PUBLIC_API_BASE_URL` is set (needed for local dev, where the frontend runs on :3000). CORS allows `http://localhost:3000`.
 

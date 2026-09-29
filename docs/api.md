@@ -1,7 +1,8 @@
 # API
 
 Versioned REST API under `/api/v1`. The OpenAPI document is at `/openapi/v1.json` and Swagger UI at `/swagger`, which
-are the source of truth for schemas.
+are the source of truth for schemas. Descriptions in the OpenAPI document come from the XML comments in
+`OrderProcessing.Api`, and the `Idempotency-Key` header is described there too.
 
 | Method | Route | Purpose | Responses |
 |---|---|---|---|
