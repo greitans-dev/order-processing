@@ -12,6 +12,7 @@ namespace OrderProcessing.Api.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
 [Route("api/v{version:apiVersion}/orders")]
 public sealed class OrdersController(OrderProcessingService service) : ControllerBase
 {

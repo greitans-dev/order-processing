@@ -8,12 +8,14 @@ namespace OrderProcessing.Api.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
 [Route("api/v{version:apiVersion}/currencies")]
 public sealed class CurrenciesController : ControllerBase
 {
     /// <summary>Lists the supported currencies.</summary>
     /// <response code="200">The supported currencies. Use a <c>code</c> as <c>currencyCode</c> when submitting an order.</response>
     [HttpGet]
+    [ProducesResponseType<IReadOnlyList<CurrencyResponse>>(StatusCodes.Status200OK)]
     public ActionResult<IReadOnlyList<CurrencyResponse>> List() =>
         Ok(SupportedCurrencies.All.Select(c => c.ToResponse()).ToList());
 }

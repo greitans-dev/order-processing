@@ -22,5 +22,7 @@ WORKDIR /app
 COPY --from=backend-build /app/publish ./
 COPY --from=frontend-build /app/frontend/out ./wwwroot
 ENV ASPNETCORE_URLS=http://+:8080
+# One JSON object per log line in containers; override with Logging__Console__FormatterName=simple
+ENV Logging__Console__FormatterName=json
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "OrderProcessing.Api.dll"]
