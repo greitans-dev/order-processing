@@ -7,7 +7,7 @@
 The frontend uses client components only, so it is built as a static export (`output: 'export'`) and copied into the
 API's `wwwroot/`. Kestrel serves both the UI and the API, so there is one process, one image, and one port. The
 frontend and API are always same-origin, so no reverse proxy is needed. This was chosen over a multi-container setup
-with an nginx reverse proxy for simplicity.
+with a reverse proxy for simplicity.
 
 ## Dockerfile
 

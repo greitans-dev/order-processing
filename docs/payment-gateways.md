@@ -7,8 +7,7 @@ Gateways are pluggable. `IPaymentGateway` (with a `GatewayId`) is implemented in
 ## Mock gateways
 
 `mock-alpha` and `mock-beta` decline deterministically when the amount is `>= 10000.00` and approve anything lower
-(`9999.99` succeeds, `10000.00` fails). Confirmation codes are prefixed `ALPHA-` and `BETA-`. The rule ignores currency,
-which is acceptable while only `EUR` exists.
+(`9999.99` succeeds, `10000.00` fails). Confirmation codes are prefixed `ALPHA-` and `BETA-`.
 
 ## Adding a gateway
 
@@ -20,5 +19,4 @@ the registration line and the class.
 
 ## Currencies
 
-`SupportedCurrencies` is a static list, not a DI registry, because currencies are a small, rarely changing set. To add
-one, add an entry to `SupportedCurrencies.cs`. The frontend reads the list from `GET /api/v1/currencies`.
+`SupportedCurrencies` is a static list for the sake of simplicity. The frontend reads the list from `GET /api/v1/currencies`.
