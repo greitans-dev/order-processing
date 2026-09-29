@@ -13,8 +13,8 @@ const receipt = {
 };
 
 const orders: OrderSummaryResponse[] = [
-  { orderNumber: "ORD-PAID", payableAmount: 10, currencyCode: "EUR", paymentGatewayId: "mock-alpha", description: null, status: "Paid", failureReason: null, receipt },
-  { orderNumber: "ORD-FAIL", payableAmount: 20000, currencyCode: "EUR", paymentGatewayId: "mock-beta", description: "big", status: "Failed", failureReason: "Declined", receipt: null },
+  { orderNumber: "ORD-PAID", payableAmount: 10, currencyCode: "EUR", paymentGatewayId: "mock-alpha", description: null, status: "Paid", failureReason: null, receipt, createdAtUtc: "2026-01-01T10:00:00Z" },
+  { orderNumber: "ORD-FAIL", payableAmount: 20000, currencyCode: "EUR", paymentGatewayId: "mock-beta", description: "big", status: "Failed", failureReason: "Declined", receipt: null, createdAtUtc: "2026-01-02T10:00:00Z" },
 ];
 
 it("shows an empty state", async () => {
@@ -35,6 +35,19 @@ it("lists orders with amount and currency, and offers resubmit only on failed on
   expect(within(failed).getByText(/Declined/)).toBeInTheDocument();
   expect(within(failed).getByRole("button", { name: /resubmit/i })).toBeInTheDocument();
   expect(client.listOrders).toHaveBeenCalledWith("alice");
+});
+
+it("shows orders in the order received with their creation time", async () => {
+  const client = fakeClient({ listOrders: jest.fn().mockResolvedValue([orders[1], orders[0]]) });
+  render(<OrderHistory client={client} userId="alice" refreshKey={0} onOutcome={jest.fn()} />);
+
+  await screen.findByText("ORD-FAIL");
+  const items = screen.getAllByRole("listitem");
+  expect(items[0]).toHaveTextContent("ORD-FAIL");
+  expect(items[1]).toHaveTextContent("ORD-PAID");
+  const time = within(items[0]).getByText((_, el) => el?.tagName === "TIME");
+  expect(time).toHaveAttribute("datetime", "2026-01-02T10:00:00Z");
+  expect(time.textContent).toBe(new Date("2026-01-02T10:00:00Z").toLocaleString());
 });
 
 it("resubmits a failed order, reports the outcome and reloads the list", async () => {

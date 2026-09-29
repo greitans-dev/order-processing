@@ -32,4 +32,5 @@ export interface OrderSummaryResponse {
   status: OrderStatus;
   failureReason: string | null;
   receipt: OrderReceiptResponse | null;
+  createdAtUtc: string;
 }

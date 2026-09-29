@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { OrderApiClient, OrderOutcome } from "@/services/orderApiClient";
 import { OrderSummaryResponse } from "@/types/order";
-import { formatAmount } from "./format";
+import { formatAmount, formatDateTime } from "./format";
 
 interface Props {
   client: OrderApiClient;
@@ -65,6 +65,7 @@ export function OrderHistory({ client, userId, refreshKey, onOutcome }: Props) {
               <strong>{o.orderNumber}</strong>{" "}
               <span className={`status status-${o.status.toLowerCase()}`}>{o.status}</span>
             </div>
+            <div className="hint"><time dateTime={o.createdAtUtc}>{formatDateTime(o.createdAtUtc)}</time></div>
             <div>{formatAmount(o.payableAmount, o.currencyCode)}</div>
             {o.status === "Failed" && o.failureReason && <div className="error">{o.failureReason}</div>}
             {o.status === "Failed" && (

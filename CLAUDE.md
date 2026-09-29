@@ -63,7 +63,7 @@ Clean Architecture / DDD with strict inward dependencies: `Domain → nothing`, 
 **API.** It is versioned (`Asp.Versioning.*`, routes `api/v1/...`). Endpoints:
 - `POST /orders` requires the `Idempotency-Key` header (400 if missing or invalid). It returns 200 with a receipt, 422 with an error that always includes `OrderNumber`, or 409 if the key was already used with a different payload.
 - `POST /orders/{orderNumber}/resubmit`
-- `GET /orders?userId=`
+- `GET /orders?userId=` returns the user's orders newest first (by `CreatedAtUtc`).
 - `GET /payment-gateways`
 - `GET /currencies`
 
