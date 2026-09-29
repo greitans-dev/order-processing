@@ -191,6 +191,25 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
+    public async Task List_orders_returns_newest_first_with_created_at()
+    {
+        var user = $"order-{Guid.NewGuid()}";
+        var submitted = new List<string>();
+        for (var i = 0; i < 3; i++)
+        {
+            var body = await Json(await Submit(Order(10m + i, user: user)));
+            submitted.Add(body.GetProperty("orderNumber").GetString()!);
+            await Task.Delay(20);
+        }
+
+        var items = (await Json(await _client.GetAsync($"/api/v1/orders?userId={user}"))).EnumerateArray().ToList();
+
+        items.Select(i => i.GetProperty("orderNumber").GetString()).ShouldBe(Enumerable.Reverse(submitted));
+        var created = items.Select(i => i.GetProperty("createdAtUtc").GetDateTimeOffset()).ToList();
+        created.ShouldBe(created.OrderByDescending(c => c));
+    }
+
+    [Fact]
     public async Task List_orders_without_user_returns_400() =>
         (await _client.GetAsync("/api/v1/orders")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 

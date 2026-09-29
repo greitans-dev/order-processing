@@ -27,7 +27,8 @@ public sealed class OrderProcessingService(
                 : await ProcessPaymentAsync(existing.OrderNumber, ct);
         }
 
-        var order = Order.Create(command.UserId, command.IdempotencyKey, amount, gatewayId, command.Description);
+        var order = Order.Create(command.UserId, command.IdempotencyKey, DateTimeOffset.UtcNow, amount, gatewayId,
+            command.Description);
         await repository.AddAsync(order, ct);
         return await ProcessPaymentAsync(order.OrderNumber, ct);
     }
@@ -38,7 +39,7 @@ public sealed class OrderProcessingService(
     public async Task<IReadOnlyList<OrderSummaryDto>> GetOrdersForUserAsync(string userId, CancellationToken ct)
     {
         var orders = await repository.FindByUserIdAsync(userId, ct);
-        return orders.Select(ToSummary).ToList();
+        return orders.OrderByDescending(o => o.CreatedAtUtc).ThenBy(o => o.OrderNumber.Value).Select(ToSummary).ToList();
     }
 
     private async Task<OrderProcessingResult> ProcessPaymentAsync(OrderNumber orderNumber, CancellationToken ct)
@@ -73,5 +74,5 @@ public sealed class OrderProcessingService(
 
     private static OrderSummaryDto ToSummary(Order o) =>
         new(o.OrderNumber.Value, o.PayableAmount.Amount, o.PayableAmount.CurrencyCode, o.PaymentGatewayId.Value,
-            o.Description, o.Status.ToString(), o.FailureReason, o.Receipt is null ? null : ToDto(o.Receipt));
+            o.Description, o.Status.ToString(), o.FailureReason, o.Receipt is null ? null : ToDto(o.Receipt), o.CreatedAtUtc);
 }

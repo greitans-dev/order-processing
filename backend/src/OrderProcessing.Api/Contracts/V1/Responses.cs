@@ -7,7 +7,8 @@ public sealed record OrderErrorResponse(string OrderNumber, string Message);
 
 public sealed record OrderSummaryResponse(
     string OrderNumber, decimal PayableAmount, string CurrencyCode, string PaymentGatewayId,
-    string? Description, string Status, string? FailureReason, OrderReceiptResponse? Receipt);
+    string? Description, string Status, string? FailureReason, OrderReceiptResponse? Receipt,
+    DateTimeOffset CreatedAtUtc);
 
 public sealed record PaymentGatewayResponse(string Id, string Name);
 

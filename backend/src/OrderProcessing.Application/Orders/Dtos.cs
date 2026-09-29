@@ -13,7 +13,7 @@ public sealed record OrderProcessingError(string OrderNumber, string Message);
 
 public sealed record OrderSummaryDto(
     string OrderNumber, decimal PayableAmount, string CurrencyCode, string PaymentGatewayId,
-    string? Description, string Status, string? FailureReason, OrderReceiptDto? Receipt);
+    string? Description, string Status, string? FailureReason, OrderReceiptDto? Receipt, DateTimeOffset CreatedAtUtc);
 
 public enum OrderProcessingOutcome { Paid, AlreadyPaid, Failed }
 

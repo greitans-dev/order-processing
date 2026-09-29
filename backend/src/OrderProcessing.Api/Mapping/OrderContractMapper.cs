@@ -18,7 +18,7 @@ public static class OrderContractMapper
 
     public static OrderSummaryResponse ToResponse(this OrderSummaryDto s) =>
         new(s.OrderNumber, s.PayableAmount, s.CurrencyCode, s.PaymentGatewayId, s.Description, s.Status,
-            s.FailureReason, s.Receipt?.ToResponse());
+            s.FailureReason, s.Receipt?.ToResponse(), s.CreatedAtUtc);
 
     public static PaymentGatewayResponse ToResponse(this PaymentGatewayInfo g) => new(g.Id, g.DisplayName);
 

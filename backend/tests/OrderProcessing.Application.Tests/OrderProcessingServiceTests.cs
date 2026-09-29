@@ -36,6 +36,14 @@ public class OrderProcessingServiceTests
         _gateway.Setup(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PaymentResult.Failure("Declined: limit"));
 
+    private Order SeedOrder(string userId, DateTimeOffset createdAtUtc)
+    {
+        var order = Order.Create(userId, new IdempotencyKey(Guid.NewGuid().ToString()), createdAtUtc,
+            Money.Of(10m, "EUR"), new PaymentGatewayId("test-gw"), null);
+        _repository.AddAsync(order, default).GetAwaiter().GetResult();
+        return order;
+    }
+
     private async Task<Order> SeedFailedOrder()
     {
         GatewayDeclines();
@@ -258,6 +266,35 @@ public class OrderProcessingServiceTests
         results.Count(r => r.Outcome == OrderProcessingOutcome.AlreadyPaid).ShouldBe(4);
         results.Select(r => r.OrderNumber).Distinct().Count().ShouldBe(1);
         _repository.All.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetOrdersForUser_returns_newest_first_with_creation_time()
+    {
+        var t = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        var oldest = SeedOrder("user-1", t.AddMinutes(-10));
+        var newest = SeedOrder("user-1", t);
+        var middle = SeedOrder("user-1", t.AddMinutes(-5));
+        SeedOrder("other", t.AddHours(1));
+
+        var orders = await _sut.GetOrdersForUserAsync("user-1", default);
+
+        orders.Select(o => o.OrderNumber).ShouldBe(
+            [newest.OrderNumber.Value, middle.OrderNumber.Value, oldest.OrderNumber.Value]);
+        orders.Select(o => o.CreatedAtUtc).ShouldBe([t, t.AddMinutes(-5), t.AddMinutes(-10)]);
+    }
+
+    [Fact]
+    public async Task GetOrdersForUser_orders_equal_timestamps_by_order_number()
+    {
+        var t = DateTimeOffset.UtcNow;
+        var a = SeedOrder("user-1", t);
+        var b = SeedOrder("user-1", t);
+
+        var orders = await _sut.GetOrdersForUserAsync("user-1", default);
+
+        orders.Select(o => o.OrderNumber).ShouldBe(
+            new[] { a.OrderNumber.Value, b.OrderNumber.Value }.Order().ToList());
     }
 
     [Fact]

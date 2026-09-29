@@ -76,7 +76,7 @@ public sealed class OrdersController(OrderProcessingService service) : Controlle
         }
     }
 
-    /// <summary>Lists a user's orders.</summary>
+    /// <summary>Lists a user's orders, newest first.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<OrderSummaryResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<OrderSummaryResponse>>> List(

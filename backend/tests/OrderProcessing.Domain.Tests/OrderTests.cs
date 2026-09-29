@@ -8,8 +8,10 @@ public class OrderTests
 {
     private static readonly IdempotencyKey Key = new("key-1");
 
+    private static readonly DateTimeOffset CreatedAt = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
+
     private static Order NewOrder() =>
-        Order.Create("user-1", Key, Money.Of(50m, "EUR"), new PaymentGatewayId("mock-alpha"), "notes");
+        Order.Create("user-1", Key, CreatedAt, Money.Of(50m, "EUR"), new PaymentGatewayId("mock-alpha"), "notes");
 
     private static Receipt ReceiptFor(Order o) =>
         new(o.OrderNumber, o.PayableAmount, DateTimeOffset.UtcNow, "CONF-1");
@@ -23,12 +25,13 @@ public class OrderTests
         order.Receipt.ShouldBeNull();
         order.UserId.ShouldBe("user-1");
         order.IdempotencyKey.ShouldBe(Key);
+        order.CreatedAtUtc.ShouldBe(CreatedAt);
     }
 
     [Fact]
     public void Create_rejects_blank_user() =>
         Should.Throw<ArgumentException>(() =>
-            Order.Create(" ", Key, Money.Of(1m, "EUR"), new PaymentGatewayId("g"), null));
+            Order.Create(" ", Key, CreatedAt, Money.Of(1m, "EUR"), new PaymentGatewayId("g"), null));
 
     [Fact]
     public void MarkPaid_sets_status_and_receipt()

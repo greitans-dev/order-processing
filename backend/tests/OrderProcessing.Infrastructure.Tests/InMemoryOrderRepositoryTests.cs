@@ -8,7 +8,7 @@ namespace OrderProcessing.Infrastructure.Tests;
 public class InMemoryOrderRepositoryTests
 {
     private static Order NewOrder(string user = "u1", string? key = null) =>
-        Order.Create(user, new IdempotencyKey(key ?? Guid.NewGuid().ToString()), Money.Of(10m, "EUR"),
+        Order.Create(user, new IdempotencyKey(key ?? Guid.NewGuid().ToString()), DateTimeOffset.UtcNow, Money.Of(10m, "EUR"),
             new PaymentGatewayId("mock-alpha"), null);
 
     [Fact]
