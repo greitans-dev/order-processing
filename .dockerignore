@@ -7,3 +7,4 @@ frontend/out
 .local
 .superpowers
 docs
+.env*
