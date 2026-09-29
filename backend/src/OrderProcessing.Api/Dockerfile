@@ -1,4 +1,4 @@
-# Build context is the repository root (see docker-compose.yml).
+# Build context is the repository root (see compose.yaml).
 
 # 1. Frontend: static export to /app/frontend/out
 FROM node:22-alpine AS frontend-build
