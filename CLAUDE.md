@@ -40,6 +40,21 @@ An order-submission web app for "XYZ Inc.": a Next.js frontend (TypeScript, clie
 - CI: `.github/workflows/sonarqube.yml` runs the tests with coverage and sends the analysis to SonarQube on pushes to `main` (details in `docs/ci.md`). Scanner settings are `/d:` arguments in the workflow, not a `sonar-project.properties`.
 - Docs go in `docs/`. The root `README.md` is brief and links to them.
 
+## SonarQube analysis results
+
+The CI analysis results (quality gate, coverage, issues) can be read through the SonarQube REST API. The host URL, project key and token are in the git-ignored `.env.agent-secrets` in the repo root, as `SONARQUBE_HOST_URL`, `SONARQUBE_PROJECT_KEY` and `SONARQUBE_TOKEN`. Read them from that file, never copy the values into tracked files, commits or logs. Authenticate with the token as the basic-auth user and an empty password:
+
+```sh
+set -a; . ./.env.agent-secrets; set +a
+curl -s -u "$SONARQUBE_TOKEN:" "$SONARQUBE_HOST_URL/api/qualitygates/project_status?projectKey=$SONARQUBE_PROJECT_KEY"
+curl -s -u "$SONARQUBE_TOKEN:" "$SONARQUBE_HOST_URL/api/measures/component?component=$SONARQUBE_PROJECT_KEY&metricKeys=coverage,bugs,vulnerabilities,code_smells,duplicated_lines_density"
+curl -s -u "$SONARQUBE_TOKEN:" "$SONARQUBE_HOST_URL/api/issues/search?componentKeys=$SONARQUBE_PROJECT_KEY&resolved=false"
+```
+
+The three calls above are verified to work with the current token. `api/measures/component_tree` (per-file coverage) and `api/qualitygates/get_by_project` answer "Insufficient privileges", so the token only has browse-level access. Use `api/issues/search` (add `&types=VULNERABILITY`, `&ps=100`) for per-file findings.
+
+The analysis is produced by `.github/workflows/sonarqube.yml` on pushes to `main`, so results reflect the last pushed commit, not local changes.
+
 ## Architecture (big picture)
 
 Clean Architecture / DDD with strict inward dependencies: `Domain → nothing`, `Application → Domain`, `Infrastructure → Application + Domain`, `Api → all` (the Infrastructure reference is for the composition root only). The architecture-test project enforces this. Controllers must not reference Infrastructure, `IPaymentGateway` implementations live only in `Infrastructure.Payments`, and `IOrderRepository` implementations only in `Infrastructure.Persistence`.
