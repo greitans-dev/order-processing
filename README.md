@@ -27,6 +27,14 @@ pnpm install
 NEXT_PUBLIC_API_BASE_URL=http://localhost:5080 pnpm dev
 ```
 
+In PowerShell, set the variable on its own line before `pnpm dev`:
+
+```powershell
+$env:NEXT_PUBLIC_API_BASE_URL = "http://localhost:5080"
+```
+
+See [Running locally](docs/running-locally.md) for the full PowerShell commands.
+
 ## Run with Docker
 
 ```sh
