@@ -69,3 +69,4 @@ API trusts the user ID it receives. Orders are kept in memory, so they are lost 
 - [Payment gateways](docs/payment-gateways.md)
 - [Running locally](docs/running-locally.md)
 - [Deployment](docs/deployment.md)
+- [CI](docs/ci.md)

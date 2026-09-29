@@ -37,6 +37,7 @@ An order-submission web app for "XYZ Inc.": a Next.js frontend (TypeScript, clie
 - Backend tests: `dotnet test backend/OrderProcessing.sln`. Single test: `dotnet test backend/OrderProcessing.sln --filter "FullyQualifiedName~<TestName>"`.
 - Frontend: `cd frontend && pnpm install && pnpm dev`, then `pnpm test` (Jest).
 - Docker: `docker compose up --build` exposes only port 8080.
+- CI: `.github/workflows/sonarqube.yml` runs the tests with coverage and sends the analysis to SonarQube on pushes to `main` (details in `docs/ci.md`). Scanner settings are `/d:` arguments in the workflow, not a `sonar-project.properties`.
 - Docs go in `docs/`. The root `README.md` is brief and links to them.
 
 ## Architecture (big picture)
