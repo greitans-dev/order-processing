@@ -37,25 +37,26 @@ describe("orderApiClient", () => {
     it("POSTs JSON to /api/v1/orders and returns the receipt", async () => {
       const fetchMock = jest.fn().mockResolvedValue(response(200, receipt));
 
-      const result = await clientWith(fetchMock).submitOrder(request);
+      const result = await clientWith(fetchMock).submitOrder(request, "key-1");
 
       expect(result).toEqual({ status: "paid", receipt });
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe("http://api/api/v1/orders");
       expect(init.method).toBe("POST");
       expect(init.headers["Content-Type"]).toBe("application/json");
+      expect(init.headers["Idempotency-Key"]).toBe("key-1");
       expect(JSON.parse(init.body)).toEqual(request);
     });
 
     it("uses relative URLs when baseUrl is empty", async () => {
       const fetchMock = jest.fn().mockResolvedValue(response(200, receipt));
-      await clientWith(fetchMock, "").submitOrder(request);
+      await clientWith(fetchMock, "").submitOrder(request, "key-1");
       expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/orders");
     });
 
     it("strips a trailing slash from baseUrl", async () => {
       const fetchMock = jest.fn().mockResolvedValue(response(200, receipt));
-      await clientWith(fetchMock, "http://api/").submitOrder(request);
+      await clientWith(fetchMock, "http://api/").submitOrder(request, "key-1");
       expect(fetchMock.mock.calls[0][0]).toBe("http://api/api/v1/orders");
     });
 
@@ -63,27 +64,36 @@ describe("orderApiClient", () => {
       const error = { orderNumber: "ORD-1", message: "Declined" };
       const fetchMock = jest.fn().mockResolvedValue(response(422, error));
 
-      expect(await clientWith(fetchMock).submitOrder(request)).toEqual({ status: "failed", error });
+      expect(await clientWith(fetchMock).submitOrder(request, "key-1")).toEqual({ status: "failed", error });
     });
 
     it("throws OrderApiError with validation messages on 400", async () => {
       const body = { title: "One or more validation errors occurred.", errors: { CurrencyCode: ["Bad currency"] } };
       const fetchMock = jest.fn().mockResolvedValue(response(400, body));
 
-      const promise = clientWith(fetchMock).submitOrder(request);
+      const promise = clientWith(fetchMock).submitOrder(request, "key-1");
 
       await expect(promise).rejects.toBeInstanceOf(OrderApiError);
       await expect(promise).rejects.toThrow("Bad currency");
     });
 
+    it("throws OrderApiError with the problem detail on 409", async () => {
+      const fetchMock = jest.fn().mockResolvedValue(response(409, { detail: "Key already used." }));
+
+      const promise = clientWith(fetchMock).submitOrder(request, "key-1");
+
+      await expect(promise).rejects.toBeInstanceOf(OrderApiError);
+      await expect(promise).rejects.toThrow("Key already used.");
+    });
+
     it("throws a friendly OrderApiError on network failure", async () => {
       const fetchMock = jest.fn().mockRejectedValue(new TypeError("Failed to fetch"));
-      await expect(clientWith(fetchMock).submitOrder(request)).rejects.toThrow(/reach the server/i);
+      await expect(clientWith(fetchMock).submitOrder(request, "key-1")).rejects.toThrow(/reach the server/i);
     });
 
     it("throws on unexpected status codes", async () => {
       const fetchMock = jest.fn().mockResolvedValue(response(500));
-      await expect(clientWith(fetchMock).submitOrder(request)).rejects.toThrow(/500/);
+      await expect(clientWith(fetchMock).submitOrder(request, "key-1")).rejects.toThrow(/500/);
     });
   });
 

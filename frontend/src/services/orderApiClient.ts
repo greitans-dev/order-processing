@@ -19,7 +19,8 @@ export class OrderApiError extends Error {
 }
 
 export interface OrderApiClient {
-  submitOrder(request: SubmitOrderRequest): Promise<OrderOutcome>;
+  /** Repeating a call with the same idempotency key and request never creates a second order or charge. */
+  submitOrder(request: SubmitOrderRequest, idempotencyKey: string): Promise<OrderOutcome>;
   resubmitOrder(orderNumber: string): Promise<OrderOutcome>;
   listOrders(userId: string): Promise<OrderSummaryResponse[]>;
   listPaymentGateways(): Promise<PaymentGatewayResponse[]>;
@@ -55,6 +56,16 @@ export function createOrderApiClient(baseUrl = "", fetchImpl: typeof fetch = (..
     return "The order was rejected as invalid.";
   }
 
+  async function conflictMessage(response: Response): Promise<string> {
+    try {
+      const body = await readJson<{ detail?: string }>(response);
+      if (body.detail) return body.detail;
+    } catch {
+      // fall through to the generic message
+    }
+    return "This order conflicts with an earlier submission. Please review it and try again.";
+  }
+
   async function processOrder(path: string, init: RequestInit): Promise<OrderOutcome> {
     const response = await send(path, init);
     switch (response.status) {
@@ -66,6 +77,8 @@ export function createOrderApiClient(baseUrl = "", fetchImpl: typeof fetch = (..
         throw new OrderApiError(await validationMessage(response), 400);
       case 404:
         throw new OrderApiError("Order not found.", 404);
+      case 409:
+        throw new OrderApiError(await conflictMessage(response), 409);
       default:
         throw new OrderApiError(`Unexpected server response (${response.status}).`, response.status);
     }
@@ -80,10 +93,10 @@ export function createOrderApiClient(baseUrl = "", fetchImpl: typeof fetch = (..
   }
 
   return {
-    submitOrder: (request) =>
+    submitOrder: (request, idempotencyKey) =>
       processOrder("/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
         body: JSON.stringify(request),
       }),
     resubmitOrder: (orderNumber) =>

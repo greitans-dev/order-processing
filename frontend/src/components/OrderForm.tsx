@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { newIdempotencyKey } from "@/services/idempotencyKey";
 import { OrderApiClient, OrderOutcome } from "@/services/orderApiClient";
 import { CurrencyResponse } from "@/types/currency";
 import { PaymentGatewayResponse } from "@/types/paymentGateway";
@@ -29,6 +30,9 @@ export function OrderForm({ client, userId, onOutcome }: Props) {
   const [errors, setErrors] = useState<OrderValidationErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // The key of the last attempt that got no definitive answer (network error, 5xx). A retry of the same
+  // order reuses it so the server can deduplicate; changed input or a definitive outcome rotates it.
+  const pendingAttempt = useRef<{ fingerprint: string; key: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,13 +62,19 @@ export function OrderForm({ client, userId, onOutcome }: Props) {
 
     setSubmitting(true);
     try {
-      const outcome = await client.submitOrder({
+      const request = {
         userId,
         payableAmount: Number(payableAmount.trim()),
         currencyCode,
         paymentGatewayId,
         description: description.trim() === "" ? undefined : description,
-      });
+      };
+      const fingerprint = JSON.stringify(request);
+      if (pendingAttempt.current?.fingerprint !== fingerprint) {
+        pendingAttempt.current = { fingerprint, key: newIdempotencyKey() };
+      }
+      const outcome = await client.submitOrder(request, pendingAttempt.current.key);
+      pendingAttempt.current = null;
       setPayableAmount("");
       setDescription("");
       onOutcome(outcome);

@@ -40,7 +40,7 @@ it("submits a valid order and reports the outcome", async () => {
     currencyCode: "EUR",
     paymentGatewayId: "mock-beta",
     description: "my notes",
-  });
+  }, expect.any(String));
   expect(onOutcome).toHaveBeenCalledWith({ status: "paid", receipt });
 });
 
@@ -95,4 +95,49 @@ it("shows a load error when gateways cannot be fetched", async () => {
   const client = fakeClient({ listPaymentGateways: jest.fn().mockRejectedValue(new OrderApiError("boom")) });
   render(<OrderForm client={client} userId="alice" onOutcome={jest.fn()} />);
   expect(await screen.findByRole("alert")).toHaveTextContent(/boom/);
+});
+
+it("reuses the idempotency key when retrying the same order after an error", async () => {
+  const client = fakeClient();
+  client.submitOrder.mockRejectedValueOnce(new OrderApiError("Could not reach the server."));
+  client.submitOrder.mockResolvedValueOnce({ status: "paid", receipt });
+  await renderForm(client);
+
+  await userEvent.type(screen.getByLabelText(/amount/i), "10");
+  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await screen.findByRole("alert");
+  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+
+  const [firstKey, secondKey] = client.submitOrder.mock.calls.map((c) => c[1]);
+  expect(secondKey).toBe(firstKey);
+});
+
+it("uses a new idempotency key when the order was edited after an error", async () => {
+  const client = fakeClient();
+  client.submitOrder.mockRejectedValueOnce(new OrderApiError("Could not reach the server."));
+  client.submitOrder.mockResolvedValueOnce({ status: "paid", receipt });
+  await renderForm(client);
+
+  await userEvent.type(screen.getByLabelText(/amount/i), "10");
+  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await screen.findByRole("alert");
+  await userEvent.type(screen.getByLabelText(/amount/i), "5");
+  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+
+  const [firstKey, secondKey] = client.submitOrder.mock.calls.map((c) => c[1]);
+  expect(secondKey).not.toBe(firstKey);
+});
+
+it("uses a new idempotency key for the next order after a definitive outcome", async () => {
+  const client = fakeClient();
+  client.submitOrder.mockResolvedValue({ status: "paid", receipt });
+  await renderForm(client);
+
+  await userEvent.type(screen.getByLabelText(/amount/i), "10");
+  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await userEvent.type(screen.getByLabelText(/amount/i), "10");
+  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+
+  const [firstKey, secondKey] = client.submitOrder.mock.calls.map((c) => c[1]);
+  expect(secondKey).not.toBe(firstKey);
 });
