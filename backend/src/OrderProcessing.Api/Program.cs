@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using OrderProcessing.Api.OpenApi;
 using OrderProcessing.Application;
 using OrderProcessing.Infrastructure;
 
@@ -18,7 +19,11 @@ builder.Services
         o.GroupNameFormat = "'v'V";
         o.SubstituteApiVersionInUrl = true;
     });
-builder.Services.AddOpenApi("v1");
+builder.Services.AddOpenApi("v1", o =>
+{
+    o.AddDocumentTransformer<ApiInfoDocumentTransformer>();
+    o.AddOperationTransformer<IdempotencyKeyOperationTransformer>();
+});
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 // Only needed when the Next.js dev server (port 3000) calls the API cross-origin; harmless when served same-origin.

@@ -230,6 +230,75 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         euro.GetProperty("name").GetString().ShouldBe("Euro");
     }
 
+    private async Task<JsonElement> OpenApiDocument() => await Json(await _client.GetAsync("/openapi/v1.json"));
+
+    [Fact]
+    public async Task OpenApi_describes_the_idempotency_key_header_on_submit()
+    {
+        var submit = (await OpenApiDocument()).GetProperty("paths").GetProperty("/api/v1/orders").GetProperty("post");
+
+        var header = submit.GetProperty("parameters").EnumerateArray()
+            .Single(p => p.GetProperty("name").GetString() == "Idempotency-Key");
+        header.GetProperty("in").GetString().ShouldBe("header");
+        header.GetProperty("required").GetBoolean().ShouldBeTrue();
+        header.GetProperty("schema").GetProperty("maxLength").GetInt32().ShouldBe(255);
+        var description = header.GetProperty("description").GetString()!;
+        description.ShouldContain("UUID");
+        description.ShouldContain("order number");
+        description.ShouldContain("409");
+        submit.GetProperty("description").GetString()!.ShouldContain("Idempotency-Key");
+    }
+
+    [Theory]
+    [InlineData("/api/v1/orders", "post", new[] { "200", "400", "409", "422" })]
+    [InlineData("/api/v1/orders/{orderNumber}/resubmit", "post", new[] { "200", "404", "422" })]
+    [InlineData("/api/v1/orders", "get", new[] { "200", "400" })]
+    [InlineData("/api/v1/payment-gateways", "get", new[] { "200" })]
+    [InlineData("/api/v1/currencies", "get", new[] { "200" })]
+    public async Task OpenApi_documents_every_response_with_a_description(string path, string method, string[] codes)
+    {
+        var operation = (await OpenApiDocument()).GetProperty("paths").GetProperty(path).GetProperty(method);
+
+        operation.GetProperty("summary").GetString().ShouldNotBeNullOrWhiteSpace();
+        var responses = operation.GetProperty("responses");
+        foreach (var code in codes)
+            responses.GetProperty(code).GetProperty("description").GetString().ShouldNotBeNullOrWhiteSpace();
+    }
+
+    // A nullable reference to another schema is rendered as oneOf [null, {$ref, description}].
+    private static string? DescriptionOf(JsonElement schema)
+    {
+        if (schema.TryGetProperty("description", out var description)) return description.GetString();
+        return schema.TryGetProperty("oneOf", out var oneOf)
+            ? oneOf.EnumerateArray().Select(DescriptionOf).FirstOrDefault(d => d is not null)
+            : null;
+    }
+
+    [Fact]
+    public async Task OpenApi_schemas_have_property_descriptions()
+    {
+        var schemas = (await OpenApiDocument()).GetProperty("components").GetProperty("schemas");
+
+        foreach (var name in new[] { "SubmitOrderRequest", "OrderReceiptResponse", "OrderErrorResponse", "OrderSummaryResponse" })
+        {
+            var schema = schemas.GetProperty(name);
+            schema.GetProperty("description").GetString().ShouldNotBeNullOrWhiteSpace();
+            foreach (var property in schema.GetProperty("properties").EnumerateObject())
+                DescriptionOf(property.Value).ShouldNotBeNullOrWhiteSpace($"{name}.{property.Name} needs a description");
+        }
+    }
+
+    [Fact]
+    public async Task OpenApi_info_is_short_and_does_not_repeat_the_idempotency_overview()
+    {
+        var info = (await OpenApiDocument()).GetProperty("info");
+
+        info.GetProperty("title").GetString().ShouldBe("Order Processing API");
+        var description = info.GetProperty("description").GetString()!;
+        description.ShouldNotBeNullOrWhiteSpace();
+        description.ToLowerInvariant().ShouldNotContain("idempoten");
+    }
+
     [Fact]
     public async Task OpenApi_document_and_swagger_ui_are_served()
     {

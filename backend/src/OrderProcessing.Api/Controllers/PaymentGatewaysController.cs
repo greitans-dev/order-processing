@@ -12,6 +12,7 @@ namespace OrderProcessing.Api.Controllers;
 public sealed class PaymentGatewaysController(IPaymentGatewayRegistry registry) : ControllerBase
 {
     /// <summary>Lists the payment gateways currently available.</summary>
+    /// <response code="200">The available gateways. Use an <c>id</c> as <c>paymentGatewayId</c> when submitting an order.</response>
     [HttpGet]
     public ActionResult<IReadOnlyList<PaymentGatewayResponse>> List() =>
         Ok(registry.ListAvailable().Select(g => g.ToResponse()).ToList());

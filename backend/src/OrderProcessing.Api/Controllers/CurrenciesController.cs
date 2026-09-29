@@ -12,6 +12,7 @@ namespace OrderProcessing.Api.Controllers;
 public sealed class CurrenciesController : ControllerBase
 {
     /// <summary>Lists the supported currencies.</summary>
+    /// <response code="200">The supported currencies. Use a <c>code</c> as <c>currencyCode</c> when submitting an order.</response>
     [HttpGet]
     public ActionResult<IReadOnlyList<CurrencyResponse>> List() =>
         Ok(SupportedCurrencies.All.Select(c => c.ToResponse()).ToList());
