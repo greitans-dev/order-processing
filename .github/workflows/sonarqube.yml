@@ -1,0 +1,97 @@
+name: SonarQube
+
+# Analyzes code quality and publishes test coverage (backend and frontend) to SonarQube on every push to main.
+# Required repository secrets: SONAR_TOKEN, SONAR_HOST_URL. Optional repository variable: SONAR_PROJECT_KEY.
+# See docs/ci.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonarqube-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'order-processing' }}
+    steps:
+      - name: Check SonarQube configuration
+        run: |
+          missing=""
+          [ -z "$SONAR_TOKEN" ] && missing="$missing SONAR_TOKEN"
+          [ -z "$SONAR_HOST_URL" ] && missing="$missing SONAR_HOST_URL"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing. See docs/ci.md."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Sonar needs the full history for blame and new-code detection
+
+      - uses: actions/setup-java@v4 # required by the SonarScanner for .NET
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4 # version comes from "packageManager" in frontend/package.json
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: sonar-cache-${{ runner.os }}
+          restore-keys: sonar-cache-
+
+      - name: Install SonarScanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Begin analysis
+        run: >
+          dotnet sonarscanner begin
+          /k:"$SONAR_PROJECT_KEY"
+          /d:sonar.host.url="$SONAR_HOST_URL"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+          /d:sonar.javascript.lcov.reportPaths="frontend/coverage/lcov.info"
+          /d:sonar.exclusions="**/bin/**,**/obj/**,**/TestResults/**,frontend/node_modules/**,frontend/.next/**,frontend/out/**,frontend/coverage/**"
+          /d:sonar.test.inclusions="frontend/src/**/*.test.ts,frontend/src/**/*.test.tsx,frontend/jest.*"
+          /d:sonar.qualitygate.wait=true
+          /d:sonar.qualitygate.timeout=300
+
+      - name: Build and test backend (coverage)
+        run: |
+          dotnet build backend/OrderProcessing.sln -c Release --no-incremental
+          dotnet test backend/OrderProcessing.sln -c Release --no-build \
+            --collect:"XPlat Code Coverage" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: Test frontend (coverage)
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm test --coverage
+          # Sonar resolves lcov paths from the repository root, jest writes them relative to frontend/
+          sed -i 's#^SF:#SF:frontend/#' coverage/lcov.info
+
+      - name: End analysis and wait for the quality gate
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
