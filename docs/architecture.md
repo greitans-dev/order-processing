@@ -49,6 +49,24 @@ when a request has to be retried. `SubmitNewOrderAsync` works as follows:
 The `(userId, key)` lock is always taken before the order-number lock, and resubmit only takes the latter, so the two
 cannot deadlock.
 
+## Logging
+
+`OrderProcessingService` logs through `ILogger` with source-generated `[LoggerMessage]` methods
+(`OrderProcessingService.Logging.cs`, event ids 1000+). Every line carries the order number and, where relevant, the user
+and gateway. Because all charges go through the service, gateway calls are logged in one place (duration and outcome)
+and any `IPaymentGateway` is covered without extra code.
+
+| Level | Events |
+|---|---|
+| Information | order created, idempotent replay, resubmit requested, order already paid, charge succeeded |
+| Warning | idempotency key reused with a different payload, charge declined (with the reason) |
+| Error | a gateway threw; the order stays `Pending` and the exception is rethrown |
+| Debug | charge started |
+
+The description and other free text are never logged. Unhandled exceptions are logged once by the exception-handler
+middleware, and clients get an `application/problem+json` 500 with a `traceId` and no details. Console scopes are on, so
+each line carries the trace id of its request. Local runs use the simple console format, the Docker image uses JSON.
+
 ### Known limitations
 
 - The lock is process-local. It does not prevent a double charge if the API is scaled to several instances.
