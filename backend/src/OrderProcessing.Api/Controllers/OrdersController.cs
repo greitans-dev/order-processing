@@ -31,9 +31,8 @@ public sealed class OrdersController(OrderProcessingService service) : Controlle
     /// - Keys are scoped to the <c>userId</c> in the payload.
     /// </remarks>
     /// <param name="request">The order to submit.</param>
-    /// <param name="idempotencyKey">
-    /// Client-generated key that identifies this order attempt, for example a UUID. Required, at most 255
-    /// characters, no blank value or control characters. Reuse it only to retry the same request.
+    /// <param name="idempotencyKey">Client-generated key that identifies this order attempt, for example a UUID.
+    /// Required, at most 255 characters, no blank value or control characters. Reuse it only to retry the same request.
     /// </param>
     /// <param name="ct">Cancellation token.</param>
     /// <response code="200">The order was paid, or it had already been paid: the receipt.</response>

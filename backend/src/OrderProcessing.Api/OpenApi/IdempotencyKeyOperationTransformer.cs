@@ -11,10 +11,8 @@ namespace OrderProcessing.Api.OpenApi;
 internal sealed class IdempotencyKeyOperationTransformer : IOpenApiOperationTransformer
 {
     private const string Description =
-        "Client-generated key that identifies this order attempt, for example a UUID. Send the same key when " +
-        "retrying the same request: the original outcome is returned and the order is never created or charged " +
-        "twice. Reusing a key with a different payload returns 409. Required, at most 255 characters, no blank " +
-        "value or control characters. Not the order number, which the server generates.";
+        "Client-generated key that identifies this order attempt, for example a UUID. " +
+        "Required, at most 255 characters, no blank value or control characters. Reuse it only to retry the same request.";
 
     public Task TransformAsync(
         OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)

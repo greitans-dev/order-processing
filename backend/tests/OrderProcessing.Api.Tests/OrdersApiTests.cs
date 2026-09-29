@@ -244,9 +244,11 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         header.GetProperty("schema").GetProperty("maxLength").GetInt32().ShouldBe(255);
         var description = header.GetProperty("description").GetString()!;
         description.ShouldContain("UUID");
-        description.ShouldContain("order number");
-        description.ShouldContain("409");
-        submit.GetProperty("description").GetString()!.ShouldContain("Idempotency-Key");
+        description.ShouldContain("255");
+        var operation = submit.GetProperty("description").GetString()!;
+        operation.ShouldContain("Idempotency-Key");
+        operation.ShouldContain("order number");
+        operation.ShouldContain("409");
     }
 
     [Theory]
