@@ -4,4 +4,4 @@ services:
       context: .
       dockerfile: backend/src/OrderProcessing.Api/Dockerfile
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
