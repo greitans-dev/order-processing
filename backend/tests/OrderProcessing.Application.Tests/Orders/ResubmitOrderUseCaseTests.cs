@@ -1,0 +1,21 @@
+using OrderProcessing.Application.Orders;
+using OrderProcessing.Domain.Orders;
+using Shouldly;
+
+namespace OrderProcessing.Application.Tests.Orders;
+
+public class ResubmitOrderUseCaseTests : OrderProcessingServiceTestBase
+{
+    [Fact]
+    public async Task Execute_FailedOrderAndGatewaySucceeds_PaysAndReusesOrderNumber()
+    {
+        var failed = await SeedFailedOrder();
+        GatewaySucceeds();
+
+        var result = await Resubmit.ExecuteAsync(failed.OrderNumber, default);
+
+        result.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
+        result.OrderNumber.ShouldBe(failed.OrderNumber.Value);
+        Repository.All.Single().Status.ShouldBe(OrderStatus.Paid);
+    }
+}

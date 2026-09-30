@@ -14,8 +14,10 @@ namespace OrderProcessing.Api.Controllers;
 [ApiVersion("1.0")]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
 [Route("api/v{version:apiVersion}/orders")]
-public sealed class OrdersController(OrderProcessingService service, GetUserOrdersUseCase getUserOrders)
-    : ControllerBase
+public sealed class OrdersController(
+    OrderProcessingService service,
+    ResubmitOrderUseCase resubmitOrder,
+    GetUserOrdersUseCase getUserOrders) : ControllerBase
 {
     /// <summary>Submits a new order and attempts payment.</summary>
     /// <remarks>
@@ -97,7 +99,7 @@ public sealed class OrdersController(OrderProcessingService service, GetUserOrde
     {
         try
         {
-            return ToActionResult(await service.ResubmitOrderAsync(new OrderNumber(orderNumber), ct));
+            return ToActionResult(await resubmitOrder.ExecuteAsync(new OrderNumber(orderNumber), ct));
         }
         catch (OrderNotFoundException)
         {

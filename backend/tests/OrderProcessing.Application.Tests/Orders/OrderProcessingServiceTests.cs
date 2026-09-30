@@ -55,19 +55,6 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     }
 
     [Fact]
-    public async Task ResubmitOrder_FailedOrderAndGatewaySucceeds_PaysAndReusesOrderNumber()
-    {
-        var failed = await SeedFailedOrder();
-        GatewaySucceeds();
-
-        var result = await Sut.ResubmitOrderAsync(failed.OrderNumber, default);
-
-        result.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
-        result.OrderNumber.ShouldBe(failed.OrderNumber.Value);
-        Repository.All.Single().Status.ShouldBe(OrderStatus.Paid);
-    }
-
-    [Fact]
     public async Task SubmitNewOrder_SameKeyTwice_CreatesOneOrderAndChargesOnce()
     {
         GatewaySucceeds();
@@ -104,7 +91,7 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
         GatewayDeclines();
         var failed = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
         GatewaySucceeds();
-        await Sut.ResubmitOrderAsync(new OrderNumber(failed.OrderNumber), default);
+        await Resubmit.ExecuteAsync(new OrderNumber(failed.OrderNumber), default);
 
         var replay = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
 

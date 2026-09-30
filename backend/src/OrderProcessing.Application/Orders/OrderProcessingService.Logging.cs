@@ -18,8 +18,4 @@ public sealed partial class OrderProcessingService
         Message = "Idempotency key {IdempotencyKey} of user {UserId} was reused with a different payload; " +
                   "it belongs to order {OrderNumber}")]
     private partial void LogIdempotencyKeyConflict(string idempotencyKey, string userId, string orderNumber);
-
-    [LoggerMessage(EventId = 1003, Level = LogLevel.Information,
-        Message = "Resubmit requested for order {OrderNumber}")]
-    private partial void LogResubmitRequested(string orderNumber);
 }

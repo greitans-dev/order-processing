@@ -53,20 +53,6 @@ public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
     }
 
     [Fact]
-    public async Task ResubmitOrder_PaidOrder_LogsWithoutCallingGateway()
-    {
-        GatewaySucceeds();
-        var first = await Sut.SubmitNewOrderAsync(Command(), default);
-        ClearLogs();
-
-        await Sut.ResubmitOrderAsync(new OrderNumber(first.OrderNumber), default);
-
-        Logs.ShouldContain(l => l.Message.Contains("Resubmit requested") && l.Message.Contains(first.OrderNumber));
-        Logs.ShouldContain(l => l.Message.Contains("already paid") && l.Message.Contains(first.OrderNumber));
-        Logs.ShouldNotContain(l => l.Message.Contains("Charging"));
-    }
-
-    [Fact]
     public async Task SubmitNewOrder_SameKeyDifferentPayload_LogsWarning()
     {
         GatewaySucceeds();

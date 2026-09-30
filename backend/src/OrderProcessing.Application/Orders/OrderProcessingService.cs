@@ -34,21 +34,9 @@ public sealed partial class OrderProcessingService(
                 : await payments.ProcessAsync(existingOrder.OrderNumber, ct);
         }
 
-        var newOrder = Order.Create(
-            command.UserId,
-            command.IdempotencyKey,
-            DateTimeOffset.UtcNow,
-            amount,
-            gatewayId,
-            command.Description);
+        var newOrder = Order.Create(command.UserId, command.IdempotencyKey, DateTimeOffset.UtcNow, amount, gatewayId, command.Description);
         await repository.AddAsync(newOrder, ct);
         LogOrderCreated(newOrder.OrderNumber.Value, newOrder.UserId, amount.Amount, amount.CurrencyCode, gatewayId.Value);
         return await payments.ProcessAsync(newOrder.OrderNumber, ct);
-    }
-
-    public Task<OrderProcessingResult> ResubmitOrderAsync(OrderNumber orderNumber, CancellationToken ct)
-    {
-        LogResubmitRequested(orderNumber.Value);
-        return payments.ProcessAsync(orderNumber, ct);
     }
 }
