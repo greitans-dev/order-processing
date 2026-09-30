@@ -52,6 +52,26 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
         captured.Description.ShouldBe("desc");
     }
 
+    [Theory]
+    [InlineData(true, OrderStatus.Paid)]
+    [InlineData(false, OrderStatus.Failed)]
+    public async Task Process_RequestCanceledDuringCharge_StillPersistsTheGatewayOutcome(bool gatewaySucceeds,
+        OrderStatus expected)
+    {
+        using var cts = new CancellationTokenSource();
+        SetupCharge().Returns(() =>
+        {
+            cts.Cancel();
+            return Task.FromResult(gatewaySucceeds ? PaymentResult.Success("C") : PaymentResult.Failure("No"));
+        });
+        var order = SeedOrder("user-1", CreatedAt);
+
+        await Payments.ProcessAsync(order.OrderNumber, cts.Token);
+
+        var stored = await Repository.FindByOrderNumberAsync(order.OrderNumber, default);
+        stored!.Status.ShouldBe(expected);
+    }
+
     [Fact]
     public async Task Process_UnknownOrder_ThrowsNotFound() =>
         await Should.ThrowAsync<OrderNotFoundException>(() =>

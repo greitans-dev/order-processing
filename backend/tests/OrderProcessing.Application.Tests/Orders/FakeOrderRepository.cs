@@ -25,6 +25,7 @@ public sealed class FakeOrderRepository : IOrderRepository
 
     public Task UpdateAsync(Order order, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         _orders[order.OrderNumber.Value] = order;
         return Task.CompletedTask;
     }

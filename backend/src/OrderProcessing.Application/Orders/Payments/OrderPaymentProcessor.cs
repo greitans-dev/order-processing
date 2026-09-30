@@ -41,20 +41,22 @@ public sealed partial class OrderPaymentProcessor(
             throw;
         }
 
+        // The gateway has answered, so the outcome is saved with CancellationToken.None: a canceled request must not
+        // leave a charged order Pending.
         if (result.IsSuccess)
         {
             LogChargeSucceeded(order.OrderNumber.Value, order.PaymentGatewayId.Value, stopwatch.ElapsedMilliseconds);
             var receipt = new Receipt(order.OrderNumber, order.PayableAmount, DateTimeOffset.UtcNow,
                 result.ConfirmationCode!);
             order.MarkPaid(receipt);
-            await repository.UpdateAsync(order, ct);
+            await repository.UpdateAsync(order, CancellationToken.None);
             return OrderProcessingResult.Success(OrderDtoMapper.ToDto(receipt));
         }
 
         LogChargeDeclined(order.OrderNumber.Value, order.PaymentGatewayId.Value, stopwatch.ElapsedMilliseconds,
             result.FailureReason!);
         order.MarkFailed(result.FailureReason!);
-        await repository.UpdateAsync(order, ct);
+        await repository.UpdateAsync(order, CancellationToken.None);
         return OrderProcessingResult.Failure(order.OrderNumber.Value, result.FailureReason!);
     }
 }
