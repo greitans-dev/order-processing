@@ -4,11 +4,9 @@ using OrderProcessing.Domain.Orders;
 
 namespace OrderProcessing.Application.Tests.Orders;
 
-internal sealed class FakeOrderRepository : IOrderRepository
+public sealed class FakeOrderRepository : IOrderRepository
 {
     private readonly ConcurrentDictionary<string, Order> _orders = new();
-
-    public int UpdateCount;
 
     public Task<Order?> FindByOrderNumberAsync(OrderNumber orderNumber, CancellationToken ct) =>
         Task.FromResult(_orders.GetValueOrDefault(orderNumber.Value));
@@ -27,7 +25,6 @@ internal sealed class FakeOrderRepository : IOrderRepository
 
     public Task UpdateAsync(Order order, CancellationToken ct)
     {
-        Interlocked.Increment(ref UpdateCount);
         _orders[order.OrderNumber.Value] = order;
         return Task.CompletedTask;
     }
