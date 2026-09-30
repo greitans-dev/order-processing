@@ -12,6 +12,7 @@ public sealed partial class SubmitOrderUseCase(
     IPaymentGatewayRegistry gatewayRegistry,
     OrderNumberLockRegistry locks,
     OrderPaymentProcessor payments,
+    TimeProvider clock,
     ILogger<SubmitOrderUseCase> logger)
 {
     public async Task<OrderProcessingResult> ExecuteAsync(SubmitOrderCommand command, CancellationToken ct)
@@ -36,7 +37,8 @@ public sealed partial class SubmitOrderUseCase(
                 : await payments.ProcessAsync(existingOrder.OrderNumber, ct);
         }
 
-        var newOrder = Order.Create(command.UserId, command.IdempotencyKey, DateTimeOffset.UtcNow, amount, gatewayId, command.Description);
+        var newOrder = Order.Create(command.UserId, command.IdempotencyKey, clock.GetUtcNow(), amount, gatewayId,
+            command.Description);
         await repository.AddAsync(newOrder, ct);
         LogOrderCreated(newOrder.OrderNumber.Value, newOrder.UserId, amount.Amount, amount.CurrencyCode, gatewayId.Value);
         return await payments.ProcessAsync(newOrder.OrderNumber, ct);

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrderProcessing.Application.Orders.Listing;
 using OrderProcessing.Application.Orders.Locking;
 using OrderProcessing.Application.Orders.Payments;
@@ -9,11 +10,14 @@ namespace OrderProcessing.Application;
 
 public static class ApplicationServiceCollectionExtensions
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services) =>
-        services
+    public static IServiceCollection AddApplication(this IServiceCollection services)
+    {
+        services.TryAddSingleton(TimeProvider.System);
+        return services
             .AddSingleton<OrderNumberLockRegistry>() // must be one instance per process
             .AddScoped<OrderPaymentProcessor>()
             .AddScoped<SubmitOrderUseCase>()
             .AddScoped<ResubmitOrderUseCase>()
             .AddScoped<GetUserOrdersUseCase>();
+    }
 }

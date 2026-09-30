@@ -11,6 +11,7 @@ public sealed partial class OrderPaymentProcessor(
     IOrderRepository repository,
     IPaymentGatewayRegistry gatewayRegistry,
     OrderNumberLockRegistry locks,
+    TimeProvider clock,
     ILogger<OrderPaymentProcessor> logger)
 {
     // Takes the per-order lock itself. Callers may already hold the idempotency-key lock, never the other way round.
@@ -46,7 +47,7 @@ public sealed partial class OrderPaymentProcessor(
         if (result.IsSuccess)
         {
             LogChargeSucceeded(order.OrderNumber.Value, order.PaymentGatewayId.Value, stopwatch.ElapsedMilliseconds);
-            var receipt = new Receipt(order.OrderNumber, order.PayableAmount, DateTimeOffset.UtcNow,
+            var receipt = new Receipt(order.OrderNumber, order.PayableAmount, clock.GetUtcNow(),
                 result.ConfirmationCode!);
             order.MarkPaid(receipt);
             await repository.UpdateAsync(order, CancellationToken.None);

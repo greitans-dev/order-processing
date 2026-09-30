@@ -27,6 +27,17 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
     }
 
     [Fact]
+    public async Task SubmitNewOrder_StampsCreationAndPaymentTimesFromTheClock()
+    {
+        GatewaySucceeds();
+
+        var result = await SubmitOrder.ExecuteAsync(Command(), default);
+
+        Repository.All.Single().CreatedAtUtc.ShouldBe(Clock.Now);
+        result.Receipt!.PaidAtUtc.ShouldBe(Clock.Now);
+    }
+
+    [Fact]
     public async Task SubmitNewOrder_GatewayDeclines_ReturnsErrorAndMarksFailed()
     {
         GatewayDeclines();
