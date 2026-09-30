@@ -57,7 +57,7 @@ public sealed partial class OrderProcessingService(
         var orders = await repository.FindByUserIdAsync(userId, ct);
         return orders
             .OrderByDescending(o => o.CreatedAtUtc)
-            .ThenBy(o => o.OrderNumber.Value).Select(ToSummary)
+            .ThenBy(o => o.OrderNumber.Value).Select(OrderDtoMapper.ToSummary)
             .ToList();
     }
 
@@ -70,7 +70,7 @@ public sealed partial class OrderProcessingService(
         if (order.Status == OrderStatus.Paid)
         {
             LogAlreadyPaid(order.OrderNumber.Value);
-            return OrderProcessingResult.AlreadyPaid(ToDto(order.Receipt!));
+            return OrderProcessingResult.AlreadyPaid(OrderDtoMapper.ToDto(order.Receipt!));
         }
 
         var gateway = gatewayRegistry.Resolve(order.PaymentGatewayId);
@@ -95,7 +95,7 @@ public sealed partial class OrderProcessingService(
                 result.ConfirmationCode!);
             order.MarkPaid(receipt);
             await repository.UpdateAsync(order, ct);
-            return OrderProcessingResult.Success(ToDto(receipt));
+            return OrderProcessingResult.Success(OrderDtoMapper.ToDto(receipt));
         }
 
         LogChargeDeclined(order.OrderNumber.Value, order.PaymentGatewayId.Value, stopwatch.ElapsedMilliseconds,
@@ -104,11 +104,4 @@ public sealed partial class OrderProcessingService(
         await repository.UpdateAsync(order, ct);
         return OrderProcessingResult.Failure(order.OrderNumber.Value, result.FailureReason!);
     }
-
-    private static OrderReceiptDto ToDto(Receipt r) =>
-        new(r.OrderNumber.Value, r.PaidAmount.Amount, r.PaidAmount.CurrencyCode, r.PaidAtUtc, r.PaymentConfirmation);
-
-    private static OrderSummaryDto ToSummary(Order o) =>
-        new(o.OrderNumber.Value, o.PayableAmount.Amount, o.PayableAmount.CurrencyCode, o.PaymentGatewayId.Value,
-            o.Description, o.Status.ToString(), o.FailureReason, o.Receipt is null ? null : ToDto(o.Receipt), o.CreatedAtUtc);
 }
