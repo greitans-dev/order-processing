@@ -1,8 +1,8 @@
 # Order Processing
 
-An order-submission app for "XYZ Inc.": a Next.js frontend and an ASP.NET Core (.NET 10) backend that forwards orders
+An order-submission app: a Next.js frontend and an ASP.NET Core (.NET 10) backend that forwards orders
 to a payment gateway and returns a receipt or a user-displayable error. It works out of the box with two mocked
-gateways, with no API keys or setup.
+payment gateways.
 
 ## Prerequisites
 
