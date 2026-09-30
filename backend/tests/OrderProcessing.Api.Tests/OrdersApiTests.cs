@@ -25,7 +25,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         (await r.Content.ReadFromJsonAsync<JsonElement>());
 
     [Fact]
-    public async Task Submit_valid_order_returns_200_with_receipt()
+    public async Task SubmitOrder_ValidOrder_Returns200WithReceipt()
     {
         var response = await Submit(Order(99.90m));
 
@@ -39,7 +39,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task Submit_at_decline_limit_returns_422_with_order_number_and_message()
+    public async Task SubmitOrder_AmountAtDeclineLimit_Returns422WithOrderNumberAndMessage()
     {
         var response = await Submit(Order(10000.00m, gateway: "mock-beta"));
 
@@ -56,35 +56,35 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     [InlineData(10, "mock-alpha", "USD")]
     [InlineData(10, "", "EUR")]
     [InlineData(10, "mock-alpha", "")]
-    public async Task Submit_invalid_order_returns_400(decimal amount, string gateway, string currency)
+    public async Task SubmitOrder_InvalidOrder_Returns400(decimal amount, string gateway, string currency)
     {
         var response = await Submit(Order(amount, gateway: gateway, currency: currency));
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task Submit_with_too_long_description_returns_400()
+    public async Task SubmitOrder_DescriptionTooLong_Returns400()
     {
         var response = await Submit(Order(10m, description: new string('x', 501)));
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task Resubmit_unknown_order_returns_404()
+    public async Task ResubmitOrder_UnknownOrder_Returns404()
     {
         var response = await _client.PostAsync("/api/v1/orders/ORD-NOPE/resubmit", null);
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Resubmit_with_blank_order_number_returns_400()
+    public async Task ResubmitOrder_BlankOrderNumber_Returns400()
     {
         var response = await _client.PostAsync("/api/v1/orders/%20/resubmit", null);
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task Resubmit_failed_order_is_declined_again_with_same_order_number()
+    public async Task ResubmitOrder_FailedOrder_Returns422WithSameOrderNumber()
     {
         var first = await Json(await Submit(Order(20000m)));
         var number = first.GetProperty("orderNumber").GetString();
@@ -96,7 +96,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task Resubmit_paid_order_returns_same_receipt()
+    public async Task ResubmitOrder_PaidOrder_ReturnsSameReceipt()
     {
         var first = await Json(await Submit(Order(15m)));
         var number = first.GetProperty("orderNumber").GetString();
@@ -112,7 +112,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task List_orders_by_user_includes_submission_with_status()
+    public async Task ListOrders_UserWithSubmissions_IncludesStatus()
     {
         var user = $"user-{Guid.NewGuid():N}";
         await Submit(Order(10m, user: user));
@@ -128,7 +128,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task Submit_without_idempotency_key_returns_400()
+    public async Task SubmitOrder_MissingIdempotencyKey_Returns400()
     {
         var response = await Submit(Order(10m), withKey: false);
 
@@ -138,15 +138,15 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     [Theory]
     [InlineData(" ")]
     [InlineData("bad\tkey")]
-    public async Task Submit_with_invalid_idempotency_key_returns_400(string key) =>
+    public async Task SubmitOrder_InvalidIdempotencyKey_Returns400(string key) =>
         (await Submit(Order(10m), key)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
     [Fact]
-    public async Task Submit_with_too_long_idempotency_key_returns_400() =>
+    public async Task SubmitOrder_IdempotencyKeyTooLong_Returns400() =>
         (await Submit(Order(10m), new string('k', 256))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
     [Fact]
-    public async Task Repeated_submit_with_same_key_returns_same_receipt_and_creates_one_order()
+    public async Task SubmitOrder_RepeatedSameKey_ReturnsSameReceiptAndCreatesOneOrder()
     {
         var user = $"idem-{Guid.NewGuid()}";
         var key = Guid.NewGuid().ToString();
@@ -165,7 +165,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task Repeated_declined_submit_with_same_key_returns_same_422_order_number()
+    public async Task SubmitOrder_RepeatedDeclinedSameKey_Returns422WithSameOrderNumber()
     {
         var key = Guid.NewGuid().ToString();
 
@@ -178,7 +178,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task Same_key_with_different_payload_returns_409()
+    public async Task SubmitOrder_SameKeyDifferentPayload_Returns409()
     {
         var user = $"idem-{Guid.NewGuid()}";
         var key = Guid.NewGuid().ToString();
@@ -191,7 +191,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task List_orders_returns_newest_first_with_created_at()
+    public async Task ListOrders_MultipleOrders_ReturnsNewestFirstWithCreatedAt()
     {
         var user = $"order-{Guid.NewGuid()}";
         var submitted = new List<string>();
@@ -210,11 +210,11 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task List_orders_without_user_returns_400() =>
+    public async Task ListOrders_MissingUserId_Returns400() =>
         (await _client.GetAsync("/api/v1/orders")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
     [Fact]
-    public async Task List_gateways_returns_both_mocks()
+    public async Task ListGateways_Default_ReturnsBothMocks()
     {
         var items = (await Json(await _client.GetAsync("/api/v1/payment-gateways"))).EnumerateArray().ToList();
         items.Select(i => i.GetProperty("id").GetString()).ShouldBe(["mock-alpha", "mock-beta"], ignoreOrder: true);
@@ -222,7 +222,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task List_currencies_returns_euro()
+    public async Task ListCurrencies_Default_ReturnsEuro()
     {
         var items = (await Json(await _client.GetAsync("/api/v1/currencies"))).EnumerateArray().ToList();
         var euro = items.ShouldHaveSingleItem();
@@ -233,7 +233,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     private async Task<JsonElement> OpenApiDocument() => await Json(await _client.GetAsync("/openapi/v1.json"));
 
     [Fact]
-    public async Task OpenApi_describes_the_idempotency_key_header_on_submit()
+    public async Task OpenApi_SubmitOperation_DescribesIdempotencyKeyHeader()
     {
         var submit = (await OpenApiDocument()).GetProperty("paths").GetProperty("/api/v1/orders").GetProperty("post");
 
@@ -257,7 +257,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     [InlineData("/api/v1/orders", "get", new[] { "200", "400" })]
     [InlineData("/api/v1/payment-gateways", "get", new[] { "200" })]
     [InlineData("/api/v1/currencies", "get", new[] { "200" })]
-    public async Task OpenApi_documents_every_response_with_a_description(string path, string method, string[] codes)
+    public async Task OpenApi_EveryOperation_DocumentsEachResponseWithDescription(string path, string method, string[] codes)
     {
         var operation = (await OpenApiDocument()).GetProperty("paths").GetProperty(path).GetProperty(method);
 
@@ -277,7 +277,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task OpenApi_schemas_have_property_descriptions()
+    public async Task OpenApi_Schemas_DescribeEveryProperty()
     {
         var schemas = (await OpenApiDocument()).GetProperty("components").GetProperty("schemas");
 
@@ -291,7 +291,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task OpenApi_info_is_short_and_does_not_repeat_the_idempotency_overview()
+    public async Task OpenApi_Info_IsShortAndOmitsIdempotencyOverview()
     {
         var info = (await OpenApiDocument()).GetProperty("info");
 
@@ -302,7 +302,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     }
 
     [Fact]
-    public async Task OpenApi_document_and_swagger_ui_are_served()
+    public async Task OpenApi_DocumentAndSwaggerUi_AreServed()
     {
         var doc = await _client.GetAsync("/openapi/v1.json");
         doc.StatusCode.ShouldBe(HttpStatusCode.OK);

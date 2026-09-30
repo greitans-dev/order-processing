@@ -20,10 +20,10 @@ public class LoggingConfigurationTests(WebApplicationFactory<Program> factory) :
             .Services.GetRequiredService<IOptionsMonitor<T>>().CurrentValue;
 
     [Fact]
-    public void Json_formatter_includes_scopes_so_log_lines_carry_the_trace_id() =>
+    public void JsonFormatter_DefaultConfig_IncludesScopes() =>
         OptionsFor<JsonConsoleFormatterOptions>(ConsoleFormatterNames.Json).IncludeScopes.ShouldBeTrue();
 
     [Fact]
-    public void Simple_formatter_includes_scopes() =>
+    public void SimpleFormatter_DefaultConfig_IncludesScopes() =>
         OptionsFor<SimpleConsoleFormatterOptions>(ConsoleFormatterNames.Simple).IncludeScopes.ShouldBeTrue();
 }

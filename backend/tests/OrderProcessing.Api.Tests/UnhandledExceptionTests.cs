@@ -27,7 +27,7 @@ public class UnhandledExceptionTests(WebApplicationFactory<Program> factory) : I
     }
 
     [Fact]
-    public async Task Unhandled_exception_returns_problem_json_without_details_and_is_logged_as_an_error()
+    public async Task SubmitOrder_UnhandledException_ReturnsProblemJsonWithoutDetailsAndLogsError()
     {
         var throwing = factory.WithWebHostBuilder(b => b.ConfigureServices(services =>
         {
