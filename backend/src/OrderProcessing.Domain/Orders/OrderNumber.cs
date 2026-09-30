@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace OrderProcessing.Domain.Orders;
 
 public sealed record OrderNumber
@@ -10,8 +12,8 @@ public sealed record OrderNumber
         Value = value;
     }
 
-    public static OrderNumber New() =>
-        new("ORD-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant());
+    /// <summary>Generates an unguessable number with 64 random bits, so collisions and enumeration are impractical.</summary>
+    public static OrderNumber New() => new("ORD-" + RandomNumberGenerator.GetHexString(16));
 
     public override string ToString() => Value;
 }

@@ -1,7 +1,7 @@
 namespace OrderProcessing.Api.Contracts.V1;
 
 /// <summary>Receipt for a paid order.</summary>
-/// <param name="OrderNumber">Server-generated order number, for example <c>ORD-1A2B3C4D</c>.</param>
+/// <param name="OrderNumber">Server-generated order number, for example <c>ORD-1A2B3C4D5E6F7A8B</c>.</param>
 /// <param name="PaidAmount">Amount that was charged.</param>
 /// <param name="CurrencyCode">ISO 4217 currency code of the charge.</param>
 /// <param name="PaidAtUtc">When the payment was confirmed (UTC).</param>

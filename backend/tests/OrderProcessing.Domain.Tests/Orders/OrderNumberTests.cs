@@ -6,10 +6,10 @@ namespace OrderProcessing.Domain.Tests.Orders;
 public class OrderNumberTests
 {
     [Fact]
-    public void OrderNumber_New_HasOrdPrefixAndEightCharSuffix()
+    public void OrderNumber_New_HasOrdPrefixAndSixteenCharSuffix()
     {
         var number = OrderNumber.New();
-        number.Value.ShouldMatch("^ORD-[0-9A-F]{8}$");
+        number.Value.ShouldMatch("^ORD-[0-9A-F]{16}$");
     }
 
     [Fact]
