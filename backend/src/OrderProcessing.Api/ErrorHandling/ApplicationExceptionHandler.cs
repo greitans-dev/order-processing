@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using OrderProcessing.Api.Contracts.V1;
 using OrderProcessing.Application.Abstractions;
+using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
 
 namespace OrderProcessing.Api.ErrorHandling;
@@ -52,6 +53,8 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
             Invalid(nameof(SubmitOrderRequest.PaymentGatewayId), exception.Message),
         UnsupportedCurrencyException =>
             Invalid(nameof(SubmitOrderRequest.CurrencyCode), exception.Message),
+        InvalidIdempotencyKeyException =>
+            Invalid(ApiHeaders.IdempotencyKey, exception.Message),
         _ => null
     };
 

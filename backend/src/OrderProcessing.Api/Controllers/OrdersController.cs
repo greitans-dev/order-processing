@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using OrderProcessing.Api.Contracts.V1;
 using OrderProcessing.Api.Mapping;
@@ -10,14 +9,11 @@ using OrderProcessing.Domain.Orders;
 
 namespace OrderProcessing.Api.Controllers;
 
-[ApiController]
-[ApiVersion("1.0")]
-[ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
 [Route("api/v{version:apiVersion}/orders")]
 public sealed class OrdersController(
     SubmitOrderUseCase submitOrder,
     OrderPaymentProcessor paymentProcessor,
-    GetUserOrdersUseCase getUserOrders) : ControllerBase
+    GetUserOrdersUseCase getUserOrders) : ApiControllerBase
 {
     /// <summary>Submits a new order and attempts payment.</summary>
     /// <remarks>
@@ -55,17 +51,8 @@ public sealed class OrdersController(
         [FromHeader(Name = ApiHeaders.IdempotencyKey), Required, MaxLength(IdempotencyKey.MaxLength)] string idempotencyKey,
         CancellationToken ct)
     {
-        IdempotencyKey key;
-        try
-        {
-            key = new IdempotencyKey(idempotencyKey);
-        }
-        catch (ArgumentException ex)
-        {
-            return Invalid(ApiHeaders.IdempotencyKey, ex.Message);
-        }
-
-        return ToActionResult(await submitOrder.ExecuteAsync(request.ToCommand(key), ct));
+        var command = request.ToCommand(new IdempotencyKey(idempotencyKey));
+        return ToActionResult(await submitOrder.ExecuteAsync(command, ct));
     }
 
     /// <summary>Retries payment for an existing order. Paid orders return their existing receipt.</summary>
@@ -111,7 +98,4 @@ public sealed class OrdersController(
         OrderProcessingResult.Failed failed => UnprocessableEntity(failed.Error.ToResponse()),
         _ => throw new InvalidOperationException($"Unexpected result {result.GetType().Name}.")
     };
-
-    private IActionResult Invalid(string field, string message) =>
-        ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { [field] = [message] }));
 }

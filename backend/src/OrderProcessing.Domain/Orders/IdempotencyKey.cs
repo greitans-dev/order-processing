@@ -8,11 +8,13 @@ public sealed record IdempotencyKey
 
     public IdempotencyKey(string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        ArgumentNullException.ThrowIfNull(value);
+        if (string.IsNullOrWhiteSpace(value))
+            throw new InvalidIdempotencyKeyException("Idempotency key must not be blank.");
         if (value.Length > MaxLength)
-            throw new ArgumentException($"Idempotency key must be at most {MaxLength} characters.", nameof(value));
+            throw new InvalidIdempotencyKeyException($"Idempotency key must be at most {MaxLength} characters.");
         if (value.Any(char.IsControl))
-            throw new ArgumentException("Idempotency key must not contain control characters.", nameof(value));
+            throw new InvalidIdempotencyKeyException("Idempotency key must not contain control characters.");
         Value = value;
     }
 
