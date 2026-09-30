@@ -14,7 +14,7 @@ public class GetUserOrdersUseCaseTests : OrderUseCaseTestBase
         var middle = SeedOrder("user-1", t.AddMinutes(-5));
         SeedOrder("other", t.AddHours(1));
 
-        var orders = await GetUserOrders.ExecuteAsync(new GetUserOrdersQuery("user-1"), default);
+        var orders = await GetUserOrders.ExecuteAsync("user-1", default);
 
         orders.Select(o => o.OrderNumber).ShouldBe(
             [newest.OrderNumber.Value, middle.OrderNumber.Value, oldest.OrderNumber.Value]);
@@ -28,7 +28,7 @@ public class GetUserOrdersUseCaseTests : OrderUseCaseTestBase
         var a = SeedOrder("user-1", t);
         var b = SeedOrder("user-1", t);
 
-        var orders = await GetUserOrders.ExecuteAsync(new GetUserOrdersQuery("user-1"), default);
+        var orders = await GetUserOrders.ExecuteAsync("user-1", default);
 
         orders.Select(o => o.OrderNumber).ShouldBe(
             new[] { a.OrderNumber.Value, b.OrderNumber.Value }.Order().ToList());
@@ -41,7 +41,7 @@ public class GetUserOrdersUseCaseTests : OrderUseCaseTestBase
         await SubmitOrder.ExecuteAsync(Command(5m), default);
         await SubmitOrder.ExecuteAsync(Command(6m) with { UserId = "other" }, default);
 
-        var orders = await GetUserOrders.ExecuteAsync(new GetUserOrdersQuery("user-1"), default);
+        var orders = await GetUserOrders.ExecuteAsync("user-1", default);
 
         var summary = orders.ShouldHaveSingleItem();
         summary.PayableAmount.ShouldBe(5m);

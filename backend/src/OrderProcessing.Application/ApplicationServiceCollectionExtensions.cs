@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrderProcessing.Application.Orders.Listing;
 using OrderProcessing.Application.Orders.Locking;
 using OrderProcessing.Application.Orders.Payments;
-using OrderProcessing.Application.Orders.Resubmit;
 using OrderProcessing.Application.Orders.Submit;
 
 namespace OrderProcessing.Application;
@@ -18,7 +17,6 @@ public static class ApplicationServiceCollectionExtensions
             .AddSingleton<OrderNumberLockRegistry>() // must be one instance per process
             .AddScoped<OrderPaymentProcessor>()
             .AddScoped<SubmitOrderUseCase>()
-            .AddScoped<ResubmitOrderUseCase>()
             .AddScoped<GetUserOrdersUseCase>();
     }
 }

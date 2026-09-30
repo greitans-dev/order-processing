@@ -4,12 +4,13 @@ namespace OrderProcessing.Application.Orders.Listing;
 
 public sealed class GetUserOrdersUseCase(IOrderRepository repository)
 {
-    public async Task<IReadOnlyList<OrderSummaryDto>> ExecuteAsync(GetUserOrdersQuery query, CancellationToken ct)
+    public async Task<IReadOnlyList<OrderSummaryDto>> ExecuteAsync(string userId, CancellationToken ct)
     {
-        var orders = await repository.FindByUserIdAsync(query.UserId, ct);
+        var orders = await repository.FindByUserIdAsync(userId, ct);
         return orders
             .OrderByDescending(o => o.CreatedAtUtc)
-            .ThenBy(o => o.OrderNumber.Value).Select(OrderDtoMapper.ToSummary)
+            .ThenBy(o => o.OrderNumber.Value)
+            .Select(OrderDtoMapper.ToSummary)
             .ToList();
     }
 }

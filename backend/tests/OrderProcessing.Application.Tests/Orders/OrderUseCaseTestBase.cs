@@ -6,7 +6,6 @@ using OrderProcessing.Application.Abstractions;
 using OrderProcessing.Application.Orders.Listing;
 using OrderProcessing.Application.Orders.Locking;
 using OrderProcessing.Application.Orders.Payments;
-using OrderProcessing.Application.Orders.Resubmit;
 using OrderProcessing.Application.Orders.Submit;
 using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
@@ -29,7 +28,6 @@ public abstract class OrderUseCaseTestBase
     protected Mock<IPaymentGateway> Gateway { get; } = new();
     protected OrderPaymentProcessor Payments { get; }
     protected SubmitOrderUseCase SubmitOrder { get; }
-    protected ResubmitOrderUseCase Resubmit { get; }
     protected GetUserOrdersUseCase GetUserOrders { get; }
 
     protected OrderUseCaseTestBase()
@@ -46,7 +44,6 @@ public abstract class OrderUseCaseTestBase
             new FakeLogger<OrderPaymentProcessor>(_logCollector));
         SubmitOrder = new SubmitOrderUseCase(Repository, registry.Object, locks, Payments, Clock,
             new FakeLogger<SubmitOrderUseCase>(_logCollector));
-        Resubmit = new ResubmitOrderUseCase(Payments, new FakeLogger<ResubmitOrderUseCase>(_logCollector));
         GetUserOrders = new GetUserOrdersUseCase(Repository);
     }
 

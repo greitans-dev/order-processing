@@ -5,7 +5,6 @@ using OrderProcessing.Api.Contracts.V1;
 using OrderProcessing.Api.Mapping;
 using OrderProcessing.Application.Orders.Listing;
 using OrderProcessing.Application.Orders.Payments;
-using OrderProcessing.Application.Orders.Resubmit;
 using OrderProcessing.Application.Orders.Submit;
 using OrderProcessing.Domain.Orders;
 
@@ -17,7 +16,7 @@ namespace OrderProcessing.Api.Controllers;
 [Route("api/v{version:apiVersion}/orders")]
 public sealed class OrdersController(
     SubmitOrderUseCase submitOrder,
-    ResubmitOrderUseCase resubmitOrder,
+    OrderPaymentProcessor paymentProcessor,
     GetUserOrdersUseCase getUserOrders) : ControllerBase
 {
     /// <summary>Submits a new order and attempts payment.</summary>
@@ -87,7 +86,7 @@ public sealed class OrdersController(
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout)]
     public async Task<IActionResult> Resubmit(string orderNumber, CancellationToken ct)
     {
-        return ToActionResult(await resubmitOrder.ExecuteAsync(new ResubmitOrderCommand(new OrderNumber(orderNumber)), ct));
+        return ToActionResult(await paymentProcessor.ProcessAsync(new OrderNumber(orderNumber), ct));
     }
 
     /// <summary>Lists a user's orders, newest first.</summary>
@@ -101,7 +100,7 @@ public sealed class OrdersController(
     public async Task<ActionResult<IReadOnlyList<OrderSummaryResponse>>> List(
         [FromQuery, Required] string userId, CancellationToken ct)
     {
-        var orders = await getUserOrders.ExecuteAsync(new GetUserOrdersQuery(userId), ct);
+        var orders = await getUserOrders.ExecuteAsync(userId, ct);
         return Ok(orders.Select(o => o.ToResponse()).ToList());
     }
 

@@ -21,7 +21,7 @@ implementations only in `Infrastructure.Persistence`.
 - **Application**: one class per use case, `OrderPaymentProcessor` (the locked charge step they share), the `IOrderRepository`, `IPaymentGateway` and
   `IPaymentGatewayRegistry` abstractions, and use-case DTOs. These DTOs stay separate from the API's wire contracts.
 
-  `Application/Orders` is grouped by use case (`Submit/`, `Resubmit/`, `Listing/`), plus `Payments/` for
+  `Application/Orders` is grouped by use case (`Submit/`, `Listing/`), plus `Payments/` for
   `OrderPaymentProcessor` and its result types, and `Locking/` for the lock registry. Each folder has a matching
   namespace, and tests mirror the layout.
 - **Infrastructure**: in-memory repository, the mock gateway, and the gateway registry.
