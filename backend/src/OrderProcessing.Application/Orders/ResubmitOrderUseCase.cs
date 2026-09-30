@@ -10,8 +10,4 @@ public sealed partial class ResubmitOrderUseCase(OrderPaymentProcessor payments,
         LogResubmitRequested(orderNumber.Value);
         return payments.ProcessAsync(orderNumber, ct);
     }
-
-    [LoggerMessage(EventId = 1003, Level = LogLevel.Information,
-        Message = "Resubmit requested for order {OrderNumber}")]
-    private partial void LogResubmitRequested(string orderNumber);
 }
