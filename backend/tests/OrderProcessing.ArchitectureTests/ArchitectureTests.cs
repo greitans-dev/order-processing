@@ -23,44 +23,44 @@ public class ArchitectureTests
             "Offending types: " + string.Join(", ", result.FailingTypeNames ?? []));
 
     [Fact]
-    public void Domain_does_not_depend_on_other_layers_or_frameworks() =>
+    public void Domain_ShouldNotDependOnOtherLayersOrFrameworks() =>
         ShouldPass(Types.InAssembly(Domain).ShouldNot()
             .HaveDependencyOnAny(ApplicationNs, InfrastructureNs, ApiNs, "Microsoft.AspNetCore", "Microsoft.Extensions")
             .GetResult());
 
     [Fact]
-    public void Application_does_not_depend_on_Infrastructure_or_Api() =>
+    public void Application_ShouldNotDependOnInfrastructureOrApi() =>
         ShouldPass(Types.InAssembly(Application).ShouldNot()
             .HaveDependencyOnAny(InfrastructureNs, ApiNs, "Microsoft.AspNetCore.Mvc")
             .GetResult());
 
     [Fact]
-    public void Infrastructure_does_not_depend_on_Api() =>
+    public void Infrastructure_ShouldNotDependOnApi() =>
         ShouldPass(Types.InAssembly(Infrastructure).ShouldNot().HaveDependencyOn(ApiNs).GetResult());
 
     [Fact]
-    public void Only_Infrastructure_Payments_implements_IPaymentGateway() =>
+    public void PaymentGatewayImplementations_ShouldResideOnlyInInfrastructurePayments() =>
         ShouldPass(Types.InAssemblies([Domain, Application, Infrastructure, Api])
             .That().ImplementInterface(typeof(IPaymentGateway))
             .Should().ResideInNamespace($"{InfrastructureNs}.Payments")
             .GetResult());
 
     [Fact]
-    public void Only_Infrastructure_Persistence_implements_IOrderRepository() =>
+    public void OrderRepositoryImplementations_ShouldResideOnlyInInfrastructurePersistence() =>
         ShouldPass(Types.InAssemblies([Domain, Application, Infrastructure, Api])
             .That().ImplementInterface(typeof(IOrderRepository))
             .Should().ResideInNamespace($"{InfrastructureNs}.Persistence")
             .GetResult());
 
     [Fact]
-    public void Controllers_do_not_depend_on_Infrastructure() =>
+    public void Controllers_ShouldNotDependOnInfrastructure() =>
         ShouldPass(Types.InAssembly(Api)
             .That().ResideInNamespace($"{ApiNs}.Controllers")
             .ShouldNot().HaveDependencyOn(InfrastructureNs)
             .GetResult());
 
     [Fact]
-    public void Rules_actually_find_types()
+    public void ArchitectureRules_ShouldFindTypesToInspect()
     {
         // Guards against vacuous passes if a namespace is renamed.
         Types.InAssembly(Api).That().ResideInNamespace($"{ApiNs}.Controllers").GetTypes().ShouldNotBeEmpty();
