@@ -1,21 +1,34 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { OrderApiError } from "@/services/orderApiClient";
+import { fakeClient, fakeReceipt } from "@/testUtils";
 import { OrderForm } from "./OrderForm";
-import { fakeClient } from "./testUtils";
 
-const receipt = {
-  orderNumber: "ORD-1",
-  paidAmount: 49.9,
-  currencyCode: "EUR",
-  paidAtUtc: "2026-01-01T00:00:00Z",
-  paymentConfirmation: "ALPHA-1",
-};
+const receipt = fakeReceipt({ paidAmount: 49.9 });
+const paid = { status: "paid", receipt } as const;
+const unreachable = () => new OrderApiError("Could not reach the server.");
 
-async function renderForm(client = fakeClient(), onOutcome = jest.fn()) {
+async function renderForm({ client = fakeClient(), onOutcome = jest.fn(), waitForGateways = true } = {}) {
   render(<OrderForm client={client} userId="alice" onOutcome={onOutcome} />);
-  await screen.findByRole("option", { name: "Mock Gateway Alpha" });
+  if (waitForGateways) await screen.findByRole("option", { name: "Mock Gateway Alpha" });
   return { client, onOutcome };
+}
+
+const clickSubmit = () => userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+
+async function submitAmount(amount: string) {
+  await userEvent.type(screen.getByLabelText(/amount/i), amount);
+  await clickSubmit();
+}
+
+function submittedKeys(client: ReturnType<typeof fakeClient>) {
+  const [firstKey, secondKey] = client.submitOrder.mock.calls.map((c) => c[1]);
+  return { firstKey, secondKey };
+}
+
+function failFirstSubmitThenSucceed(client: ReturnType<typeof fakeClient>) {
+  client.submitOrder.mockRejectedValueOnce(unreachable());
+  client.submitOrder.mockResolvedValueOnce(paid);
 }
 
 it("populates gateway and currency selects from the API", async () => {
@@ -26,13 +39,13 @@ it("populates gateway and currency selects from the API", async () => {
 
 it("submits a valid order and reports the outcome", async () => {
   const client = fakeClient();
-  client.submitOrder.mockResolvedValue({ status: "paid", receipt });
-  const { onOutcome } = await renderForm(client);
+  client.submitOrder.mockResolvedValue(paid);
+  const { onOutcome } = await renderForm({ client });
 
   await userEvent.type(screen.getByLabelText(/amount/i), "49.90");
   await userEvent.selectOptions(screen.getByLabelText(/payment gateway/i), "mock-beta");
   await userEvent.type(screen.getByLabelText(/description/i), "my notes");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await clickSubmit();
 
   expect(client.submitOrder).toHaveBeenCalledWith({
     userId: "alice",
@@ -41,17 +54,16 @@ it("submits a valid order and reports the outcome", async () => {
     paymentGatewayId: "mock-beta",
     description: "my notes",
   }, expect.any(String));
-  expect(onOutcome).toHaveBeenCalledWith({ status: "paid", receipt });
+  expect(onOutcome).toHaveBeenCalledWith(paid);
 });
 
 it("passes a decline through as an outcome", async () => {
   const client = fakeClient();
   const error = { orderNumber: "ORD-2", message: "Declined" };
   client.submitOrder.mockResolvedValue({ status: "failed", error });
-  const { onOutcome } = await renderForm(client);
+  const { onOutcome } = await renderForm({ client });
 
-  await userEvent.type(screen.getByLabelText(/amount/i), "20000");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await submitAmount("20000");
 
   expect(onOutcome).toHaveBeenCalledWith({ status: "failed", error });
 });
@@ -59,8 +71,7 @@ it("passes a decline through as an outcome", async () => {
 it("blocks invalid input before any API call", async () => {
   const { client, onOutcome } = await renderForm();
 
-  await userEvent.type(screen.getByLabelText(/amount/i), "1.999");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await submitAmount("1.999");
 
   expect(await screen.findByText(/2 decimal places/i)).toBeInTheDocument();
   expect(client.submitOrder).not.toHaveBeenCalled();
@@ -69,18 +80,17 @@ it("blocks invalid input before any API call", async () => {
 
 it("blocks an empty amount", async () => {
   const { client } = await renderForm();
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await clickSubmit();
   expect(await screen.findByText(/amount is required/i)).toBeInTheDocument();
   expect(client.submitOrder).not.toHaveBeenCalled();
 });
 
 it("shows an error when the API call throws", async () => {
   const client = fakeClient();
-  client.submitOrder.mockRejectedValue(new OrderApiError("Could not reach the server."));
-  const { onOutcome } = await renderForm(client);
+  client.submitOrder.mockRejectedValue(unreachable());
+  const { onOutcome } = await renderForm({ client });
 
-  await userEvent.type(screen.getByLabelText(/amount/i), "10");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await submitAmount("10");
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Could not reach the server.");
   expect(onOutcome).not.toHaveBeenCalled();
@@ -93,51 +103,44 @@ it("limits description length in the textarea", async () => {
 
 it("shows a load error when gateways cannot be fetched", async () => {
   const client = fakeClient({ listPaymentGateways: jest.fn().mockRejectedValue(new OrderApiError("boom")) });
-  render(<OrderForm client={client} userId="alice" onOutcome={jest.fn()} />);
+  await renderForm({ client, waitForGateways: false });
   expect(await screen.findByRole("alert")).toHaveTextContent(/boom/);
 });
 
 it("reuses the idempotency key when retrying the same order after an error", async () => {
   const client = fakeClient();
-  client.submitOrder.mockRejectedValueOnce(new OrderApiError("Could not reach the server."));
-  client.submitOrder.mockResolvedValueOnce({ status: "paid", receipt });
-  await renderForm(client);
+  failFirstSubmitThenSucceed(client);
+  await renderForm({ client });
 
-  await userEvent.type(screen.getByLabelText(/amount/i), "10");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await submitAmount("10");
   await screen.findByRole("alert");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await clickSubmit();
 
-  const [firstKey, secondKey] = client.submitOrder.mock.calls.map((c) => c[1]);
+  const { firstKey, secondKey } = submittedKeys(client);
   expect(secondKey).toBe(firstKey);
 });
 
 it("uses a new idempotency key when the order was edited after an error", async () => {
   const client = fakeClient();
-  client.submitOrder.mockRejectedValueOnce(new OrderApiError("Could not reach the server."));
-  client.submitOrder.mockResolvedValueOnce({ status: "paid", receipt });
-  await renderForm(client);
+  failFirstSubmitThenSucceed(client);
+  await renderForm({ client });
 
-  await userEvent.type(screen.getByLabelText(/amount/i), "10");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await submitAmount("10");
   await screen.findByRole("alert");
-  await userEvent.type(screen.getByLabelText(/amount/i), "5");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await submitAmount("5");
 
-  const [firstKey, secondKey] = client.submitOrder.mock.calls.map((c) => c[1]);
+  const { firstKey, secondKey } = submittedKeys(client);
   expect(secondKey).not.toBe(firstKey);
 });
 
 it("uses a new idempotency key for the next order after a definitive outcome", async () => {
   const client = fakeClient();
-  client.submitOrder.mockResolvedValue({ status: "paid", receipt });
-  await renderForm(client);
+  client.submitOrder.mockResolvedValue(paid);
+  await renderForm({ client });
 
-  await userEvent.type(screen.getByLabelText(/amount/i), "10");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
-  await userEvent.type(screen.getByLabelText(/amount/i), "10");
-  await userEvent.click(screen.getByRole("button", { name: /submit order/i }));
+  await submitAmount("10");
+  await submitAmount("10");
 
-  const [firstKey, secondKey] = client.submitOrder.mock.calls.map((c) => c[1]);
+  const { firstKey, secondKey } = submittedKeys(client);
   expect(secondKey).not.toBe(firstKey);
 });

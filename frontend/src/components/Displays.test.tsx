@@ -1,13 +1,10 @@
 import { render, screen } from "@testing-library/react";
+import { fakeReceipt } from "@/testUtils";
 import { ErrorDisplay } from "./ErrorDisplay";
 import { ReceiptDisplay } from "./ReceiptDisplay";
 
 it("shows receipt details", () => {
-  render(
-    <ReceiptDisplay
-      receipt={{ orderNumber: "ORD-1", paidAmount: 5, currencyCode: "EUR", paidAtUtc: "2026-01-01T12:00:00Z", paymentConfirmation: "ALPHA-9" }}
-    />,
-  );
+  render(<ReceiptDisplay receipt={fakeReceipt({ paidAmount: 5, paymentConfirmation: "ALPHA-9" })} />);
   expect(screen.getByText("ORD-1")).toBeInTheDocument();
   expect(screen.getByText("5.00 EUR")).toBeInTheDocument();
   expect(screen.getByText("ALPHA-9")).toBeInTheDocument();
