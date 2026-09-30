@@ -13,7 +13,7 @@ namespace OrderProcessing.Api.ErrorHandling;
 /// </summary>
 public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDetails) : IExceptionHandler
 {
-    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken ct)
+    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         var problem = ToProblem(exception);
         if (problem is null) return false;
