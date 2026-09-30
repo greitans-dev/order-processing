@@ -30,4 +30,43 @@ public class OrderNumberLockRegistryTests
         using var second = await locks.AcquireAsync(new OrderNumber("ORD-2"), default)
             .WaitAsync(TimeSpan.FromSeconds(1));
     }
+
+    [Fact]
+    public async Task AcquireAsync_AfterRelease_DoesNotRetainTheLock()
+    {
+        var locks = new OrderNumberLockRegistry();
+        var first = await locks.AcquireAsync(new OrderNumber("ORD-1"), default);
+        var second = await locks.AcquireAsync("alice", new IdempotencyKey("key-1"), default);
+
+        first.Dispose();
+        second.Dispose();
+
+        locks.ActiveLockCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task AcquireAsync_CanceledWhileWaiting_DoesNotRetainTheLock()
+    {
+        var locks = new OrderNumberLockRegistry();
+        var number = new OrderNumber("ORD-1");
+        var held = await locks.AcquireAsync(number, default);
+        using var cts = new CancellationTokenSource();
+        var waiting = locks.AcquireAsync(number, cts.Token);
+
+        await cts.CancelAsync();
+        await Should.ThrowAsync<OperationCanceledException>(waiting);
+        held.Dispose();
+
+        locks.ActiveLockCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task AcquireAsync_OrderNumberLookingLikeIdempotencyLockKey_DoesNotBlockTheIdempotencyLock()
+    {
+        var locks = new OrderNumberLockRegistry();
+        using var orderLock = await locks.AcquireAsync(new OrderNumber("idem:5:alice:key-1"), default);
+
+        using var idempotencyLock = await locks.AcquireAsync("alice", new IdempotencyKey("key-1"), default)
+            .WaitAsync(TimeSpan.FromSeconds(1));
+    }
 }
