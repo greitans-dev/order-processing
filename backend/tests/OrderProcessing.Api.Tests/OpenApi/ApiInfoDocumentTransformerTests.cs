@@ -3,7 +3,7 @@ using Shouldly;
 
 namespace OrderProcessing.Api.Tests.OpenApi;
 
-public class ApiInfoDocumentTransformerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory), IClassFixture<WebApplicationFactory<Program>>
+public class ApiInfoDocumentTransformerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory)
 {
     [Fact]
     public async Task OpenApi_Info_IsShortAndOmitsIdempotencyOverview()

@@ -3,7 +3,7 @@ using Shouldly;
 
 namespace OrderProcessing.Api.Tests.OpenApi;
 
-public class IdempotencyKeyOperationTransformerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory), IClassFixture<WebApplicationFactory<Program>>
+public class IdempotencyKeyOperationTransformerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory)
 {
     [Fact]
     public async Task OpenApi_SubmitOperation_DescribesIdempotencyKeyHeader()

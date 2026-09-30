@@ -3,7 +3,7 @@ using Shouldly;
 
 namespace OrderProcessing.Api.Tests.Controllers;
 
-public class CurrenciesControllerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory), IClassFixture<WebApplicationFactory<Program>>
+public class CurrenciesControllerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory)
 {
     [Fact]
     public async Task ListCurrencies_Default_ReturnsEuro()

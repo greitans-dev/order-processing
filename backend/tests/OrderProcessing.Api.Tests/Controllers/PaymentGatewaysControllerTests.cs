@@ -3,7 +3,7 @@ using Shouldly;
 
 namespace OrderProcessing.Api.Tests.Controllers;
 
-public class PaymentGatewaysControllerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory), IClassFixture<WebApplicationFactory<Program>>
+public class PaymentGatewaysControllerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory)
 {
     [Fact]
     public async Task ListGateways_Default_ReturnsBothMocks()

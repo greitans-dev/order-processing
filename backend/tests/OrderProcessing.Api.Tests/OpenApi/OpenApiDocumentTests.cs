@@ -5,7 +5,7 @@ using Shouldly;
 
 namespace OrderProcessing.Api.Tests.OpenApi;
 
-public class OpenApiDocumentTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory), IClassFixture<WebApplicationFactory<Program>>
+public class OpenApiDocumentTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory)
 {
     [Theory]
     [InlineData("/api/v1/orders", "post", new[] { "200", "400", "409", "422" })]
@@ -54,5 +54,4 @@ public class OpenApiDocumentTests(WebApplicationFactory<Program> factory) : ApiT
         (await doc.Content.ReadAsStringAsync()).ShouldContain("/api/v1/orders");
         (await Client.GetAsync("/swagger/index.html")).StatusCode.ShouldBe(HttpStatusCode.OK);
     }
-
 }

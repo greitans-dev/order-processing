@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace OrderProcessing.Api.Tests;
 
-public abstract class ApiTestBase(WebApplicationFactory<Program> factory)
+public abstract class ApiTestBase(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
     protected HttpClient Client { get; } = factory.CreateClient();
 

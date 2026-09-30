@@ -6,9 +6,9 @@ using Shouldly;
 
 namespace OrderProcessing.Api.Tests.Controllers;
 
-public class OrdersControllerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory), IClassFixture<WebApplicationFactory<Program>>
+public class OrdersControllerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory)
 {
-    private static object Order(decimal amount, string user = "user-1", string gateway = "mock-alpha",
+    private static object OrderPayload(decimal amount, string user = "user-1", string gateway = "mock-alpha",
         string currency = "EUR", string? description = "test") =>
         new { userId = user, payableAmount = amount, currencyCode = currency, paymentGatewayId = gateway, description };
 
@@ -22,7 +22,7 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     [Fact]
     public async Task SubmitOrder_ValidOrder_Returns200WithReceipt()
     {
-        var response = await Submit(Order(99.90m));
+        var response = await Submit(OrderPayload(99.90m));
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var body = await Json(response);
@@ -36,7 +36,7 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     [Fact]
     public async Task SubmitOrder_AmountAtDeclineLimit_Returns422WithOrderNumberAndMessage()
     {
-        var response = await Submit(Order(10000.00m, gateway: "mock-beta"));
+        var response = await Submit(OrderPayload(10000.00m, gateway: "mock-beta"));
 
         response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         var body = await Json(response);
@@ -53,14 +53,14 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     [InlineData(10, "mock-alpha", "")]
     public async Task SubmitOrder_InvalidOrder_Returns400(decimal amount, string gateway, string currency)
     {
-        var response = await Submit(Order(amount, gateway: gateway, currency: currency));
+        var response = await Submit(OrderPayload(amount, gateway: gateway, currency: currency));
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task SubmitOrder_DescriptionTooLong_Returns400()
     {
-        var response = await Submit(Order(10m, description: new string('x', 501)));
+        var response = await Submit(OrderPayload(10m, description: new string('x', 501)));
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
@@ -81,7 +81,7 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     [Fact]
     public async Task ResubmitOrder_FailedOrder_Returns422WithSameOrderNumber()
     {
-        var first = await Json(await Submit(Order(20000m)));
+        var first = await Json(await Submit(OrderPayload(20000m)));
         var number = first.GetProperty("orderNumber").GetString();
 
         var response = await Client.PostAsync($"/api/v1/orders/{number}/resubmit", null);
@@ -93,7 +93,7 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     [Fact]
     public async Task ResubmitOrder_PaidOrder_ReturnsSameReceipt()
     {
-        var first = await Json(await Submit(Order(15m)));
+        var first = await Json(await Submit(OrderPayload(15m)));
         var number = first.GetProperty("orderNumber").GetString();
 
         var response = await Client.PostAsync($"/api/v1/orders/{number}/resubmit", null);
@@ -110,8 +110,8 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     public async Task ListOrders_UserWithSubmissions_IncludesStatus()
     {
         var user = $"user-{Guid.NewGuid():N}";
-        await Submit(Order(10m, user: user));
-        await Submit(Order(50000m, user: user));
+        await Submit(OrderPayload(10m, user: user));
+        await Submit(OrderPayload(50000m, user: user));
 
         var response = await Client.GetAsync($"/api/v1/orders?userId={user}");
 
@@ -125,7 +125,7 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     [Fact]
     public async Task SubmitOrder_MissingIdempotencyKey_Returns400()
     {
-        var response = await Submit(Order(10m), withKey: false);
+        var response = await Submit(OrderPayload(10m), withKey: false);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -134,11 +134,11 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     [InlineData(" ")]
     [InlineData("bad\tkey")]
     public async Task SubmitOrder_InvalidIdempotencyKey_Returns400(string key) =>
-        (await Submit(Order(10m), key)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await Submit(OrderPayload(10m), key)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
     [Fact]
     public async Task SubmitOrder_IdempotencyKeyTooLong_Returns400() =>
-        (await Submit(Order(10m), new string('k', 256))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await Submit(OrderPayload(10m), new string('k', 256))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
     [Fact]
     public async Task SubmitOrder_RepeatedSameKey_ReturnsSameReceiptAndCreatesOneOrder()
@@ -146,8 +146,8 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
         var user = $"idem-{Guid.NewGuid()}";
         var key = Guid.NewGuid().ToString();
 
-        var first = await Submit(Order(30m, user: user), key);
-        var second = await Submit(Order(30m, user: user), key);
+        var first = await Submit(OrderPayload(30m, user: user), key);
+        var second = await Submit(OrderPayload(30m, user: user), key);
 
         first.StatusCode.ShouldBe(HttpStatusCode.OK);
         second.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -164,8 +164,8 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     {
         var key = Guid.NewGuid().ToString();
 
-        var first = await Json(await Submit(Order(20000m), key));
-        var secondResponse = await Submit(Order(20000m), key);
+        var first = await Json(await Submit(OrderPayload(20000m), key));
+        var secondResponse = await Submit(OrderPayload(20000m), key);
 
         secondResponse.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         (await Json(secondResponse)).GetProperty("orderNumber").GetString()
@@ -177,9 +177,9 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     {
         var user = $"idem-{Guid.NewGuid()}";
         var key = Guid.NewGuid().ToString();
-        await Submit(Order(30m, user: user), key);
+        await Submit(OrderPayload(30m, user: user), key);
 
-        var response = await Submit(Order(31m, user: user), key);
+        var response = await Submit(OrderPayload(31m, user: user), key);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await Json(await Client.GetAsync($"/api/v1/orders?userId={user}"))).GetArrayLength().ShouldBe(1);
@@ -192,7 +192,7 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
         var submitted = new List<string>();
         for (var i = 0; i < 3; i++)
         {
-            var body = await Json(await Submit(Order(10m + i, user: user)));
+            var body = await Json(await Submit(OrderPayload(10m + i, user: user)));
             submitted.Add(body.GetProperty("orderNumber").GetString()!);
             await Task.Delay(20);
         }
