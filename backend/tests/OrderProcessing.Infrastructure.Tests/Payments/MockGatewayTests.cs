@@ -21,17 +21,16 @@ public class MockGatewayTests
     public async Task ChargeAsync_AmountJustBelowLimit_Succeeds(IPaymentGateway gateway, string prefix)
     {
         var result = await gateway.ChargeAsync(Request(9999.99m), default);
-        result.IsSuccess.ShouldBeTrue();
-        result.ConfirmationCode.ShouldStartWith(prefix);
+        result.ShouldBeOfType<PaymentResult.Approved>().ConfirmationCode.ShouldStartWith(prefix);
     }
 
     [Theory, MemberData(nameof(Gateways))]
     public async Task ChargeAsync_AmountAtLimit_DeclinesWithReadableReason(IPaymentGateway gateway, string _)
     {
         var result = await gateway.ChargeAsync(Request(10000.00m), default);
-        result.IsSuccess.ShouldBeFalse();
-        result.FailureReason.ShouldNotBeNullOrWhiteSpace();
-        result.FailureReason.ShouldContain("limit");
+        var reason = result.ShouldBeOfType<PaymentResult.Declined>().Reason;
+        reason.ShouldNotBeNullOrWhiteSpace();
+        reason.ShouldContain("limit");
     }
 
     [Fact]

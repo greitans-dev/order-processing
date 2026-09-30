@@ -25,7 +25,7 @@ public sealed partial class OrderPaymentProcessor(
         if (order.Status == OrderStatus.Paid)
         {
             LogAlreadyPaid(order.OrderNumber.Value);
-            return OrderProcessingResult.AlreadyPaid(OrderDtoMapper.ToDto(order.Receipt!));
+            return new OrderProcessingResult.AlreadyPaid(OrderDtoMapper.ToDto(order.Receipt!));
         }
 
         var gateway = gatewayRegistry.Resolve(order.PaymentGatewayId);
@@ -55,20 +55,29 @@ public sealed partial class OrderPaymentProcessor(
 
         // The gateway has answered, so the outcome is saved with CancellationToken.None: a canceled request must not
         // leave a charged order Pending.
-        if (result.IsSuccess)
+        return result switch
         {
-            LogChargeSucceeded(order.OrderNumber.Value, order.PaymentGatewayId.Value, stopwatch.ElapsedMilliseconds);
-            var receipt = new Receipt(order.OrderNumber, order.PayableAmount, clock.GetUtcNow(),
-                result.ConfirmationCode!);
-            order.MarkPaid(receipt);
-            await repository.UpdateAsync(order, CancellationToken.None);
-            return OrderProcessingResult.Success(OrderDtoMapper.ToDto(receipt));
-        }
+            PaymentResult.Approved approved => await RecordPaidAsync(order, approved, stopwatch.ElapsedMilliseconds),
+            PaymentResult.Declined declined => await RecordDeclinedAsync(order, declined, stopwatch.ElapsedMilliseconds),
+            _ => throw new InvalidOperationException($"Unexpected payment result {result.GetType().Name}.")
+        };
+    }
 
-        LogChargeDeclined(order.OrderNumber.Value, order.PaymentGatewayId.Value, stopwatch.ElapsedMilliseconds,
-            result.FailureReason!);
-        order.MarkFailed(result.FailureReason!);
+    private async Task<OrderProcessingResult> RecordPaidAsync(Order order, PaymentResult.Approved approved, long elapsedMs)
+    {
+        LogChargeSucceeded(order.OrderNumber.Value, order.PaymentGatewayId.Value, elapsedMs);
+        var receipt = new Receipt(order.OrderNumber, order.PayableAmount, clock.GetUtcNow(), approved.ConfirmationCode);
+        order.MarkPaid(receipt);
         await repository.UpdateAsync(order, CancellationToken.None);
-        return OrderProcessingResult.Failure(order.OrderNumber.Value, result.FailureReason!);
+        return new OrderProcessingResult.Paid(OrderDtoMapper.ToDto(receipt));
+    }
+
+    private async Task<OrderProcessingResult> RecordDeclinedAsync(Order order, PaymentResult.Declined declined,
+        long elapsedMs)
+    {
+        LogChargeDeclined(order.OrderNumber.Value, order.PaymentGatewayId.Value, elapsedMs, declined.Reason);
+        order.MarkFailed(declined.Reason);
+        await repository.UpdateAsync(order, CancellationToken.None);
+        return new OrderProcessingResult.Failed(new OrderProcessingError(order.OrderNumber.Value, declined.Reason));
     }
 }

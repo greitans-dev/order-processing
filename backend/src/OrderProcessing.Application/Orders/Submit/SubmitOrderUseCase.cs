@@ -33,7 +33,8 @@ public sealed partial class SubmitOrderUseCase(
             LogIdempotentReplay(command.UserId, existingOrder.OrderNumber.Value, existingOrder.Status.ToString());
             // Replay: a failed order is only retried through resubmit, never by repeating the key.
             return existingOrder.Status == OrderStatus.Failed
-                ? OrderProcessingResult.Failure(existingOrder.OrderNumber.Value, existingOrder.FailureReason!)
+                ? new OrderProcessingResult.Failed(
+                    new OrderProcessingError(existingOrder.OrderNumber.Value, existingOrder.FailureReason!))
                 : await payments.ProcessAsync(existingOrder.OrderNumber, ct);
         }
 

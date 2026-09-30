@@ -26,7 +26,7 @@ implementations only in `Infrastructure.Persistence`.
   | Folder | Contents |
   |---|---|
   | `Submit/`, `Resubmit/`, `Listing/` | One use case each (`SubmitOrderUseCase`, `ResubmitOrderUseCase`, `GetUserOrdersUseCase`, each with `ExecuteAsync`), its `*.Logging.cs` partial, and its input type (`SubmitOrderCommand`, `ResubmitOrderCommand`, `GetUserOrdersQuery`). `Listing/` also holds `OrderSummaryDto` |
-  | `Payments/` | `OrderPaymentProcessor`, the charge step shared by submit and resubmit, and the result types it produces (`OrderProcessingResult`, `OrderProcessingOutcome`, `OrderProcessingError`, `OrderReceiptDto`) |
+  | `Payments/` | `OrderPaymentProcessor`, the charge step shared by submit and resubmit, and the result types it produces (`OrderProcessingResult` with its `Paid`, `AlreadyPaid` and `Failed` cases, `OrderProcessingError`, `OrderReceiptDto`) |
   | `Locking/` | `OrderNumberLockRegistry` |
 
   `OrderDtoMapper` stays in `Orders/` because several folders use it. Tests mirror this layout.
@@ -70,8 +70,7 @@ and any `IPaymentGateway` is covered without extra code.
 | Level | Events |
 |---|---|
 | Information | order created, idempotent replay, resubmit requested, order already paid, charge succeeded |
-| Warning | idempotency key reused with a different payload, charge declined (with the reason) |
-| Warning | a gateway did not answer within `Payments:GatewayTimeout`; the order stays `Pending` (HTTP 504) |
+| Warning | idempotency key reused with a different payload, charge declined (with the reason), a gateway did not answer within `Payments:GatewayTimeout` (the order stays `Pending`, HTTP 504) |
 | Error | a gateway threw; the order stays `Pending` and the exception is rethrown |
 | Debug | charge started |
 

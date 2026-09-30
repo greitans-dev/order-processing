@@ -15,7 +15,7 @@ public class ResubmitOrderUseCaseTests : OrderUseCaseTestBase
 
         var result = await Resubmit.ExecuteAsync(new ResubmitOrderCommand(failed.OrderNumber), default);
 
-        result.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
+        result.ShouldBeOfType<OrderProcessingResult.Paid>();
         result.OrderNumber.ShouldBe(failed.OrderNumber.Value);
         Repository.All.Single().Status.ShouldBe(OrderStatus.Paid);
     }

@@ -19,7 +19,7 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
 
         var result = await Payments.ProcessAsync(order.OrderNumber, default);
 
-        result.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
+        result.ShouldBeOfType<OrderProcessingResult.Paid>();
         order.Status.ShouldBe(OrderStatus.Paid);
         VerifyChargeCalls(Times.Once);
     }
@@ -32,7 +32,7 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
 
         var result = await Payments.ProcessAsync(order.OrderNumber, default);
 
-        result.Outcome.ShouldBe(OrderProcessingOutcome.Failed);
+        result.ShouldBeOfType<OrderProcessingResult.Failed>();
         order.Status.ShouldBe(OrderStatus.Failed);
     }
 
@@ -123,8 +123,8 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
 
         var result = await Payments.ProcessAsync(order.OrderNumber, default);
 
-        result.Outcome.ShouldBe(OrderProcessingOutcome.AlreadyPaid);
-        result.Receipt.ShouldBe(first.Receipt);
+        result.ShouldBeOfType<OrderProcessingResult.AlreadyPaid>().Receipt
+            .ShouldBe(first.ShouldBeOfType<OrderProcessingResult.Paid>().Receipt);
         VerifyChargeCalls(Times.Once);
     }
 
@@ -138,7 +138,7 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
 
         ShouldHaveOnePaidAndRestAlreadyPaid(results);
         VerifyChargeCalls(Times.Once);
-        results.Select(r => r.Receipt!.PaymentConfirmation).Distinct().ShouldBe(["CONF-X"]);
+        results.Select(r => ReceiptOf(r).PaymentConfirmation).Distinct().ShouldBe(["CONF-X"]);
         order.Status.ShouldBe(OrderStatus.Paid);
     }
 }

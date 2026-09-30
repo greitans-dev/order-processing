@@ -105,10 +105,13 @@ public sealed class OrdersController(
         return Ok(orders.Select(o => o.ToResponse()).ToList());
     }
 
-    private IActionResult ToActionResult(OrderProcessingResult result) =>
-        result.Outcome == OrderProcessingOutcome.Failed
-            ? UnprocessableEntity(result.Error!.ToResponse())
-            : Ok(result.Receipt!.ToResponse());
+    private IActionResult ToActionResult(OrderProcessingResult result) => result switch
+    {
+        OrderProcessingResult.Paid paid => Ok(paid.Receipt.ToResponse()),
+        OrderProcessingResult.AlreadyPaid alreadyPaid => Ok(alreadyPaid.Receipt.ToResponse()),
+        OrderProcessingResult.Failed failed => UnprocessableEntity(failed.Error.ToResponse()),
+        _ => throw new InvalidOperationException($"Unexpected result {result.GetType().Name}.")
+    };
 
     private IActionResult Invalid(string field, string message) =>
         ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { [field] = [message] }));

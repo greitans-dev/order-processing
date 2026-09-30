@@ -17,12 +17,11 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
 
         var result = await SubmitOrder.ExecuteAsync(Command(42.5m), default);
 
-        result.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
-        result.Receipt.ShouldNotBeNull();
-        result.Receipt.PaidAmount.ShouldBe(42.5m);
-        result.Receipt.CurrencyCode.ShouldBe("EUR");
-        result.Receipt.PaymentConfirmation.ShouldBe("CONF-1");
-        result.Receipt.OrderNumber.ShouldBe(result.OrderNumber);
+        var receipt = result.ShouldBeOfType<OrderProcessingResult.Paid>().Receipt;
+        receipt.PaidAmount.ShouldBe(42.5m);
+        receipt.CurrencyCode.ShouldBe("EUR");
+        receipt.PaymentConfirmation.ShouldBe("CONF-1");
+        receipt.OrderNumber.ShouldBe(result.OrderNumber);
         Repository.All.Single().Status.ShouldBe(OrderStatus.Paid);
     }
 
@@ -34,7 +33,7 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
         var result = await SubmitOrder.ExecuteAsync(Command(), default);
 
         Repository.All.Single().CreatedAtUtc.ShouldBe(Clock.Now);
-        result.Receipt!.PaidAtUtc.ShouldBe(Clock.Now);
+        result.ShouldBeOfType<OrderProcessingResult.Paid>().Receipt.PaidAtUtc.ShouldBe(Clock.Now);
     }
 
     [Fact]
@@ -44,8 +43,7 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
 
         var result = await SubmitOrder.ExecuteAsync(Command(), default);
 
-        result.Outcome.ShouldBe(OrderProcessingOutcome.Failed);
-        result.Error.ShouldNotBeNull().Message.ShouldBe("Declined: limit");
+        result.ShouldBeOfType<OrderProcessingResult.Failed>().Error.Message.ShouldBe("Declined: limit");
         result.OrderNumber.ShouldStartWith("ORD-");
         Repository.All.Single().Status.ShouldBe(OrderStatus.Failed);
     }
@@ -74,10 +72,10 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
         var first = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
         var second = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
 
-        first.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
-        second.Outcome.ShouldBe(OrderProcessingOutcome.AlreadyPaid);
-        second.OrderNumber.ShouldBe(first.OrderNumber);
-        second.Receipt.ShouldBe(first.Receipt);
+        var paid = first.ShouldBeOfType<OrderProcessingResult.Paid>();
+        var alreadyPaid = second.ShouldBeOfType<OrderProcessingResult.AlreadyPaid>();
+        alreadyPaid.OrderNumber.ShouldBe(first.OrderNumber);
+        alreadyPaid.Receipt.ShouldBe(paid.Receipt);
         Repository.All.Count.ShouldBe(1);
         VerifyChargeCalls(Times.Once);
     }
@@ -90,9 +88,9 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
         var first = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
         var second = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
 
-        second.Outcome.ShouldBe(OrderProcessingOutcome.Failed);
-        second.OrderNumber.ShouldBe(first.OrderNumber);
-        second.Error.ShouldBe(first.Error);
+        var failed = second.ShouldBeOfType<OrderProcessingResult.Failed>();
+        failed.OrderNumber.ShouldBe(first.OrderNumber);
+        failed.Error.ShouldBe(first.ShouldBeOfType<OrderProcessingResult.Failed>().Error);
         Repository.All.Count.ShouldBe(1);
         VerifyChargeCalls(Times.Once);
     }
@@ -107,7 +105,7 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
 
         var replay = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
 
-        replay.Outcome.ShouldBe(OrderProcessingOutcome.AlreadyPaid);
+        replay.ShouldBeOfType<OrderProcessingResult.AlreadyPaid>();
         replay.OrderNumber.ShouldBe(failed.OrderNumber);
     }
 
@@ -134,7 +132,7 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
         var b = await SubmitOrder.ExecuteAsync(Command(key: SharedKey) with { UserId = "other" }, default);
 
         b.OrderNumber.ShouldNotBe(a.OrderNumber);
-        b.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
+        b.ShouldBeOfType<OrderProcessingResult.Paid>();
         Repository.All.Count.ShouldBe(2);
     }
 

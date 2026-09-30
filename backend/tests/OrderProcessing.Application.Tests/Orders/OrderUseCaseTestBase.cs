@@ -74,9 +74,16 @@ public abstract class OrderUseCaseTestBase
 
     protected static void ShouldHaveOnePaidAndRestAlreadyPaid(IReadOnlyCollection<OrderProcessingResult> results)
     {
-        results.Count(r => r.Outcome == OrderProcessingOutcome.Paid).ShouldBe(1);
-        results.Count(r => r.Outcome == OrderProcessingOutcome.AlreadyPaid).ShouldBe(ConcurrentCalls - 1);
+        results.OfType<OrderProcessingResult.Paid>().Count().ShouldBe(1);
+        results.OfType<OrderProcessingResult.AlreadyPaid>().Count().ShouldBe(ConcurrentCalls - 1);
     }
+
+    protected static OrderReceiptDto ReceiptOf(OrderProcessingResult result) => result switch
+    {
+        OrderProcessingResult.Paid paid => paid.Receipt,
+        OrderProcessingResult.AlreadyPaid alreadyPaid => alreadyPaid.Receipt,
+        _ => throw new InvalidOperationException($"{result.GetType().Name} has no receipt.")
+    };
 
     protected IReadOnlyList<FakeLogRecord> Logs => _logCollector.GetSnapshot();
 

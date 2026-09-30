@@ -5,17 +5,21 @@ namespace OrderProcessing.Application.Abstractions;
 
 public sealed record PaymentRequest(OrderNumber OrderNumber, Money Amount, string? Description);
 
-public sealed record PaymentResult
+/// <summary>A gateway's answer to a charge: it either approved it or declined it.</summary>
+public abstract record PaymentResult
 {
-    public bool IsSuccess { get; private init; }
-    public string? ConfirmationCode { get; private init; }
-    public string? FailureReason { get; private init; }
+    private PaymentResult()
+    {
+    }
 
-    public static PaymentResult Success(string confirmationCode) =>
-        new() { IsSuccess = true, ConfirmationCode = confirmationCode };
+    public static PaymentResult Success(string confirmationCode) => new Approved(confirmationCode);
 
-    public static PaymentResult Failure(string reason) =>
-        new() { IsSuccess = false, FailureReason = reason };
+    public static PaymentResult Failure(string reason) => new Declined(reason);
+
+    public sealed record Approved(string ConfirmationCode) : PaymentResult;
+
+    /// <param name="Reason">Explanation that is safe to show to the end user.</param>
+    public sealed record Declined(string Reason) : PaymentResult;
 }
 
 public sealed record PaymentGatewayInfo(string Id, string DisplayName);

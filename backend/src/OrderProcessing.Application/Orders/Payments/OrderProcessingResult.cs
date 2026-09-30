@@ -1,23 +1,18 @@
 namespace OrderProcessing.Application.Orders.Payments;
 
-public sealed record OrderProcessingResult
+/// <summary>What processing an order ended in. Each case carries exactly the data that case has.</summary>
+public abstract record OrderProcessingResult
 {
-    public OrderProcessingOutcome Outcome { get; private init; }
-    public string OrderNumber { get; private init; } = "";
-    public OrderReceiptDto? Receipt { get; private init; }
-    public OrderProcessingError? Error { get; private init; }
+    private OrderProcessingResult(string orderNumber) => OrderNumber = orderNumber;
 
-    public static OrderProcessingResult Success(OrderReceiptDto receipt) =>
-        new() { Outcome = OrderProcessingOutcome.Paid, OrderNumber = receipt.OrderNumber, Receipt = receipt };
+    public string OrderNumber { get; }
 
-    public static OrderProcessingResult AlreadyPaid(OrderReceiptDto receipt) =>
-        new() { Outcome = OrderProcessingOutcome.AlreadyPaid, OrderNumber = receipt.OrderNumber, Receipt = receipt };
+    /// <summary>The order was charged now.</summary>
+    public sealed record Paid(OrderReceiptDto Receipt) : OrderProcessingResult(Receipt.OrderNumber);
 
-    public static OrderProcessingResult Failure(string orderNumber, string message) =>
-        new()
-        {
-            Outcome = OrderProcessingOutcome.Failed,
-            OrderNumber = orderNumber,
-            Error = new OrderProcessingError(orderNumber, message)
-        };
+    /// <summary>The order had been paid before, so nothing was charged.</summary>
+    public sealed record AlreadyPaid(OrderReceiptDto Receipt) : OrderProcessingResult(Receipt.OrderNumber);
+
+    /// <summary>The gateway declined the payment.</summary>
+    public sealed record Failed(OrderProcessingError Error) : OrderProcessingResult(Error.OrderNumber);
 }
