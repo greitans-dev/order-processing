@@ -6,7 +6,7 @@ namespace OrderProcessing.Domain.Tests;
 public class MoneyTests
 {
     [Fact]
-    public void Of_accepts_lowercase_currency_and_normalizes_it()
+    public void Of_LowercaseCurrency_NormalizesToUppercase()
     {
         var money = Money.Of(10m, "eur");
         money.CurrencyCode.ShouldBe("EUR");
@@ -14,14 +14,14 @@ public class MoneyTests
     }
 
     [Fact]
-    public void Of_rejects_negative_amount() =>
+    public void Of_NegativeAmount_Throws() =>
         Should.Throw<ArgumentOutOfRangeException>(() => Money.Of(-0.01m, "EUR"));
 
     [Fact]
-    public void Of_rejects_unsupported_currency() =>
+    public void Of_UnsupportedCurrency_Throws() =>
         Should.Throw<UnsupportedCurrencyException>(() => Money.Of(1m, "USD"));
 
     [Fact]
-    public void SupportedCurrencies_lists_euro() =>
+    public void All_Default_ContainsEuro() =>
         SupportedCurrencies.All.ShouldContain(c => c.Code == "EUR" && c.Name == "Euro");
 }

@@ -17,7 +17,7 @@ public class OrderTests
         new(o.OrderNumber, o.PayableAmount, DateTimeOffset.UtcNow, "CONF-1");
 
     [Fact]
-    public void Create_starts_pending_with_generated_number()
+    public void Create_ValidInput_StartsPendingWithGeneratedNumber()
     {
         var order = NewOrder();
         order.Status.ShouldBe(OrderStatus.Pending);
@@ -29,12 +29,12 @@ public class OrderTests
     }
 
     [Fact]
-    public void Create_rejects_blank_user() =>
+    public void Create_BlankUser_Throws() =>
         Should.Throw<ArgumentException>(() =>
             Order.Create(" ", Key, CreatedAt, Money.Of(1m, "EUR"), new PaymentGatewayId("g"), null));
 
     [Fact]
-    public void MarkPaid_sets_status_and_receipt()
+    public void MarkPaid_PendingOrder_SetsStatusAndReceipt()
     {
         var order = NewOrder();
         var receipt = ReceiptFor(order);
@@ -44,7 +44,7 @@ public class OrderTests
     }
 
     [Fact]
-    public void MarkFailed_sets_status_and_reason()
+    public void MarkFailed_PendingOrder_SetsStatusAndReason()
     {
         var order = NewOrder();
         order.MarkFailed("declined");
@@ -53,7 +53,7 @@ public class OrderTests
     }
 
     [Fact]
-    public void Failed_order_can_be_paid_later()
+    public void MarkPaid_FailedOrder_SetsPaidAndClearsFailureReason()
     {
         var order = NewOrder();
         order.MarkFailed("declined");
@@ -63,7 +63,7 @@ public class OrderTests
     }
 
     [Fact]
-    public void MarkPaid_after_paid_throws()
+    public void MarkPaid_AlreadyPaid_Throws()
     {
         var order = NewOrder();
         order.MarkPaid(ReceiptFor(order));
@@ -71,7 +71,7 @@ public class OrderTests
     }
 
     [Fact]
-    public void MarkFailed_after_paid_throws()
+    public void MarkFailed_AlreadyPaid_ThrowsAndKeepsPaid()
     {
         var order = NewOrder();
         order.MarkPaid(ReceiptFor(order));
@@ -80,7 +80,7 @@ public class OrderTests
     }
 
     [Fact]
-    public void MatchesRequest_is_true_for_identical_request() =>
+    public void MatchesRequest_IdenticalRequest_ReturnsTrue() =>
         NewOrder().MatchesRequest("user-1", Money.Of(50m, "EUR"), new PaymentGatewayId("mock-alpha"), "notes")
             .ShouldBeTrue();
 
@@ -90,7 +90,7 @@ public class OrderTests
     [InlineData("user-1", 50, "mock-beta", "notes")]
     [InlineData("user-1", 50, "mock-alpha", "other")]
     [InlineData("user-1", 50, "mock-alpha", null)]
-    public void MatchesRequest_is_false_when_any_field_differs(string user, decimal amount, string gateway,
+    public void MatchesRequest_AnyFieldDiffers_ReturnsFalse(string user, decimal amount, string gateway,
         string? description) =>
         NewOrder().MatchesRequest(user, Money.Of(amount, "EUR"), new PaymentGatewayId(gateway), description)
             .ShouldBeFalse();

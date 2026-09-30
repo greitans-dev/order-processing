@@ -7,40 +7,40 @@ namespace OrderProcessing.Domain.Tests;
 public class ValueObjectTests
 {
     [Fact]
-    public void OrderNumber_New_has_ORD_prefix_and_8_char_suffix()
+    public void OrderNumber_New_HasOrdPrefixAndEightCharSuffix()
     {
         var number = OrderNumber.New();
         number.Value.ShouldMatch("^ORD-[0-9A-F]{8}$");
     }
 
     [Fact]
-    public void OrderNumber_New_is_unique() =>
+    public void OrderNumber_New_ReturnsUniqueValues() =>
         OrderNumber.New().ShouldNotBe(OrderNumber.New());
 
     [Theory]
     [InlineData("")]
     [InlineData("  ")]
-    public void OrderNumber_rejects_blank(string value) =>
+    public void OrderNumber_BlankValue_Throws(string value) =>
         Should.Throw<ArgumentException>(() => new OrderNumber(value));
 
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
-    public void PaymentGatewayId_rejects_blank(string value) =>
+    public void PaymentGatewayId_BlankValue_Throws(string value) =>
         Should.Throw<ArgumentException>(() => new PaymentGatewayId(value));
 
     [Theory]
     [InlineData("")]
     [InlineData("  ")]
     [InlineData("has\nnewline")]
-    public void IdempotencyKey_rejects_blank_or_control_characters(string value) =>
+    public void IdempotencyKey_BlankOrControlCharacters_Throws(string value) =>
         Should.Throw<ArgumentException>(() => new IdempotencyKey(value));
 
     [Fact]
-    public void IdempotencyKey_rejects_over_255_characters() =>
+    public void IdempotencyKey_Over255Characters_Throws() =>
         Should.Throw<ArgumentException>(() => new IdempotencyKey(new string('a', 256)));
 
     [Fact]
-    public void IdempotencyKey_accepts_255_characters() =>
+    public void IdempotencyKey_Exactly255Characters_IsAccepted() =>
         new IdempotencyKey(new string('a', 255)).Value.Length.ShouldBe(255);
 }
