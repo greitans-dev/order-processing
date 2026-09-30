@@ -7,7 +7,7 @@ namespace OrderProcessing.Application.Tests;
 public class OrderNumberLockRegistryTests
 {
     [Fact]
-    public async Task Same_order_number_is_mutually_exclusive()
+    public async Task AcquireAsync_SameOrderNumber_BlocksUntilReleased()
     {
         var locks = new OrderNumberLockRegistry();
         var number = new OrderNumber("ORD-1");
@@ -22,7 +22,7 @@ public class OrderNumberLockRegistryTests
     }
 
     [Fact]
-    public async Task Different_order_numbers_do_not_block_each_other()
+    public async Task AcquireAsync_DifferentOrderNumbers_DoNotBlock()
     {
         var locks = new OrderNumberLockRegistry();
         using var first = await locks.AcquireAsync(new OrderNumber("ORD-1"), default);

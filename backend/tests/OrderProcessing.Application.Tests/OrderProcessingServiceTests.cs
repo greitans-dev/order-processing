@@ -55,7 +55,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Submit_success_returns_receipt_and_marks_order_paid()
+    public async Task SubmitNewOrder_GatewaySucceeds_ReturnsReceiptAndMarksPaid()
     {
         GatewaySucceeds();
 
@@ -71,7 +71,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Submit_decline_returns_error_with_order_number_and_marks_failed()
+    public async Task SubmitNewOrder_GatewayDeclines_ReturnsErrorAndMarksFailed()
     {
         GatewayDeclines();
 
@@ -84,7 +84,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Submit_passes_amount_and_description_to_gateway()
+    public async Task SubmitNewOrder_ValidCommand_PassesAmountAndDescriptionToGateway()
     {
         PaymentRequest? captured = null;
         _gateway.Setup(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()))
@@ -99,7 +99,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Submit_with_unknown_gateway_throws_and_persists_nothing()
+    public async Task SubmitNewOrder_UnknownGateway_ThrowsAndPersistsNothing()
     {
         await Should.ThrowAsync<UnknownPaymentGatewayException>(
             () => _sut.SubmitNewOrderAsync(Command(gateway: "ghost"), default));
@@ -107,7 +107,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Submit_with_unsupported_currency_throws_and_persists_nothing()
+    public async Task SubmitNewOrder_UnsupportedCurrency_ThrowsAndPersistsNothing()
     {
         await Should.ThrowAsync<UnsupportedCurrencyException>(
             () => _sut.SubmitNewOrderAsync(Command(currency: "USD"), default));
@@ -115,7 +115,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Resubmit_of_failed_order_can_succeed_and_reuses_order_number()
+    public async Task ResubmitOrder_FailedOrderAndGatewaySucceeds_PaysAndReusesOrderNumber()
     {
         var failed = await SeedFailedOrder();
         GatewaySucceeds();
@@ -128,7 +128,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Resubmit_can_fail_again()
+    public async Task ResubmitOrder_FailedOrderAndGatewayDeclines_StaysFailed()
     {
         var failed = await SeedFailedOrder();
 
@@ -139,12 +139,12 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Resubmit_unknown_order_throws_not_found() =>
+    public async Task ResubmitOrder_UnknownOrder_ThrowsNotFound() =>
         await Should.ThrowAsync<OrderNotFoundException>(
             () => _sut.ResubmitOrderAsync(new OrderNumber("ORD-MISSING"), default));
 
     [Fact]
-    public async Task Resubmit_of_paid_order_returns_existing_receipt_without_charging()
+    public async Task ResubmitOrder_PaidOrder_ReturnsExistingReceiptWithoutCharging()
     {
         GatewaySucceeds();
         var first = await _sut.SubmitNewOrderAsync(Command(), default);
@@ -158,7 +158,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Concurrent_resubmits_charge_the_gateway_exactly_once()
+    public async Task ResubmitOrder_Concurrent_ChargesGatewayOnce()
     {
         var failed = await SeedFailedOrder();
         _gateway.Invocations.Clear();
@@ -180,7 +180,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Submit_with_same_key_twice_creates_one_order_and_charges_once()
+    public async Task SubmitNewOrder_SameKeyTwice_CreatesOneOrderAndChargesOnce()
     {
         GatewaySucceeds();
 
@@ -196,7 +196,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Submit_replay_of_failed_order_returns_same_failure_without_charging_again()
+    public async Task SubmitNewOrder_ReplayOfFailedOrder_ReturnsSameFailureWithoutCharging()
     {
         GatewayDeclines();
 
@@ -211,7 +211,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Submit_replay_after_successful_resubmit_returns_the_receipt()
+    public async Task SubmitNewOrder_ReplayAfterSuccessfulResubmit_ReturnsAlreadyPaid()
     {
         GatewayDeclines();
         var failed = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
@@ -225,7 +225,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Submit_with_same_key_and_different_payload_throws_and_does_not_charge()
+    public async Task SubmitNewOrder_SameKeyDifferentPayload_ThrowsAndDoesNotCharge()
     {
         GatewaySucceeds();
         await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
@@ -239,7 +239,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Same_key_for_different_users_is_independent()
+    public async Task SubmitNewOrder_SameKeyDifferentUsers_CreatesIndependentOrders()
     {
         GatewaySucceeds();
 
@@ -252,7 +252,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Concurrent_submits_with_same_key_charge_the_gateway_exactly_once()
+    public async Task SubmitNewOrder_ConcurrentSameKey_ChargesGatewayOnce()
     {
         _gateway.Setup(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>()))
             .Returns(async () =>
@@ -274,7 +274,7 @@ public class OrderProcessingServiceTests
     private IReadOnlyList<FakeLogRecord> Logs => _logger.Collector.GetSnapshot();
 
     [Fact]
-    public async Task Successful_submit_logs_creation_and_charge_outcome_with_order_context()
+    public async Task SubmitNewOrder_GatewaySucceeds_LogsCreationAndChargeWithOrderContext()
     {
         GatewaySucceeds();
 
@@ -291,7 +291,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Declined_charge_logs_a_warning_with_the_reason()
+    public async Task SubmitNewOrder_GatewayDeclines_LogsWarningWithReason()
     {
         GatewayDeclines();
 
@@ -303,7 +303,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Replayed_submit_is_logged_without_a_second_charge()
+    public async Task SubmitNewOrder_ReplayedKey_LogsReplayWithoutSecondCharge()
     {
         GatewaySucceeds();
         var first = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
@@ -318,7 +318,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Already_paid_resubmit_is_logged_without_calling_the_gateway()
+    public async Task ResubmitOrder_PaidOrder_LogsWithoutCallingGateway()
     {
         GatewaySucceeds();
         var first = await _sut.SubmitNewOrderAsync(Command(), default);
@@ -332,7 +332,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Key_reuse_with_a_different_payload_is_logged_as_a_warning()
+    public async Task SubmitNewOrder_SameKeyDifferentPayload_LogsWarning()
     {
         GatewaySucceeds();
         var first = await _sut.SubmitNewOrderAsync(Command(key: "k1"), default);
@@ -348,7 +348,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Gateway_exception_is_logged_with_order_context_and_rethrown_leaving_the_order_pending()
+    public async Task SubmitNewOrder_GatewayThrows_LogsErrorRethrowsAndLeavesOrderPending()
     {
         var boom = new InvalidOperationException("gateway down");
         _gateway.Setup(g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>())).ThrowsAsync(boom);
@@ -366,7 +366,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task Logs_never_contain_the_order_description()
+    public async Task SubmitNewOrder_DescriptionProvided_NeverLogsDescription()
     {
         GatewayDeclines();
         await _sut.SubmitNewOrderAsync(Command(key: "k1") with { Description = "secret-note" }, default);
@@ -377,7 +377,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task GetOrdersForUser_returns_newest_first_with_creation_time()
+    public async Task GetOrdersForUser_MultipleOrders_ReturnsNewestFirstWithCreationTime()
     {
         var t = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
         var oldest = SeedOrder("user-1", t.AddMinutes(-10));
@@ -393,7 +393,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task GetOrdersForUser_orders_equal_timestamps_by_order_number()
+    public async Task GetOrdersForUser_EqualTimestamps_OrdersByOrderNumber()
     {
         var t = DateTimeOffset.UtcNow;
         var a = SeedOrder("user-1", t);
@@ -406,7 +406,7 @@ public class OrderProcessingServiceTests
     }
 
     [Fact]
-    public async Task GetOrdersForUser_returns_only_that_users_orders_with_currency()
+    public async Task GetOrdersForUser_OtherUsersHaveOrders_ReturnsOnlyThatUsersOrders()
     {
         GatewaySucceeds();
         await _sut.SubmitNewOrderAsync(Command(5m), default);
