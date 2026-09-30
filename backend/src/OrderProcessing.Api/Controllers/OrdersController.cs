@@ -3,13 +3,11 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using OrderProcessing.Api.Contracts.V1;
 using OrderProcessing.Api.Mapping;
-using OrderProcessing.Application.Abstractions;
 using OrderProcessing.Application.Orders.Listing;
 using OrderProcessing.Application.Orders.Payments;
 using OrderProcessing.Application.Orders.Resubmit;
 using OrderProcessing.Application.Orders.Submit;
 using OrderProcessing.Domain.Orders;
-using OrderProcessing.Domain.Payments;
 
 namespace OrderProcessing.Api.Controllers;
 
@@ -66,22 +64,7 @@ public sealed class OrdersController(
             return Invalid(ApiHeaders.IdempotencyKey, ex.Message);
         }
 
-        try
-        {
-            return ToActionResult(await submitOrder.ExecuteAsync(request.ToCommand(key), ct));
-        }
-        catch (IdempotencyKeyReuseException ex)
-        {
-            return Problem(ex.Message, statusCode: StatusCodes.Status409Conflict, title: "Idempotency key conflict");
-        }
-        catch (UnknownPaymentGatewayException ex)
-        {
-            return Invalid(nameof(SubmitOrderRequest.PaymentGatewayId), ex.Message);
-        }
-        catch (UnsupportedCurrencyException ex)
-        {
-            return Invalid(nameof(SubmitOrderRequest.CurrencyCode), ex.Message);
-        }
+        return ToActionResult(await submitOrder.ExecuteAsync(request.ToCommand(key), ct));
     }
 
     /// <summary>Retries payment for an existing order. Paid orders return their existing receipt.</summary>
@@ -100,14 +83,7 @@ public sealed class OrdersController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Resubmit(string orderNumber, CancellationToken ct)
     {
-        try
-        {
-            return ToActionResult(await resubmitOrder.ExecuteAsync(new ResubmitOrderCommand(new OrderNumber(orderNumber)), ct));
-        }
-        catch (OrderNotFoundException)
-        {
-            return NotFound();
-        }
+        return ToActionResult(await resubmitOrder.ExecuteAsync(new ResubmitOrderCommand(new OrderNumber(orderNumber)), ct));
     }
 
     /// <summary>Lists a user's orders, newest first.</summary>

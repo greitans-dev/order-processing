@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using OrderProcessing.Api.ErrorHandling;
 using OrderProcessing.Api.OpenApi;
 using OrderProcessing.Application;
 using OrderProcessing.Infrastructure;
@@ -7,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
 builder.Services
     .AddApiVersioning(o =>
     {
@@ -33,7 +35,8 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
 
 var app = builder.Build();
 
-// Logs unhandled exceptions (with the trace id) and answers with an RFC 9457 problem+json 500 without details.
+// Expected failures are mapped by ApplicationExceptionHandler. Anything else is logged (with the trace id) and answered
+// with an RFC 9457 problem+json 500 without details.
 app.UseExceptionHandler();
 app.UseDefaultFiles();
 app.UseStaticFiles();
