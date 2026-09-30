@@ -1,6 +1,6 @@
 using Shouldly;
 
-namespace OrderProcessing.Application.Tests.Orders;
+namespace OrderProcessing.Application.Tests.Orders.Listing;
 
 public class GetUserOrdersUseCaseTests : OrderUseCaseTestBase
 {

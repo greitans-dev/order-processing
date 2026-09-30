@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging;
+using OrderProcessing.Application.Orders.Payments;
+using OrderProcessing.Application.Orders.Results;
 using OrderProcessing.Domain.Orders;
 
-namespace OrderProcessing.Application.Orders;
+namespace OrderProcessing.Application.Orders.Resubmit;
 
 public sealed partial class ResubmitOrderUseCase(OrderPaymentProcessor payments, ILogger<ResubmitOrderUseCase> logger)
 {

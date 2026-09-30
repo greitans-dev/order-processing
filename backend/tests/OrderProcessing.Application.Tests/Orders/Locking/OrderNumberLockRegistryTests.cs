@@ -1,8 +1,8 @@
-using OrderProcessing.Application.Orders;
+using OrderProcessing.Application.Orders.Locking;
 using OrderProcessing.Domain.Orders;
 using Shouldly;
 
-namespace OrderProcessing.Application.Tests.Orders;
+namespace OrderProcessing.Application.Tests.Orders.Locking;
 
 public class OrderNumberLockRegistryTests
 {

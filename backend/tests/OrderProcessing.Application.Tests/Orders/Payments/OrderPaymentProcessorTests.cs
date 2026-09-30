@@ -1,11 +1,11 @@
 using Moq;
 using OrderProcessing.Application.Abstractions;
-using OrderProcessing.Application.Orders;
+using OrderProcessing.Application.Orders.Results;
 using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
 using Shouldly;
 
-namespace OrderProcessing.Application.Tests.Orders;
+namespace OrderProcessing.Application.Tests.Orders.Payments;
 
 public class OrderPaymentProcessorTests : OrderUseCaseTestBase
 {

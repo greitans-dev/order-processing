@@ -1,6 +1,7 @@
 using OrderProcessing.Application.Abstractions;
+using OrderProcessing.Application.Orders.Results;
 
-namespace OrderProcessing.Application.Orders;
+namespace OrderProcessing.Application.Orders.Listing;
 
 public sealed class GetUserOrdersUseCase(IOrderRepository repository)
 {

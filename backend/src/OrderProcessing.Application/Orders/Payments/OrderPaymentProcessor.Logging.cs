@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace OrderProcessing.Application.Orders;
+namespace OrderProcessing.Application.Orders.Payments;
 
 // Never log the order description (free text) or full payloads.
 public sealed partial class OrderPaymentProcessor

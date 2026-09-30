@@ -1,7 +1,7 @@
-using Shouldly;
 using OrderProcessing.Domain.Orders;
+using Shouldly;
 
-namespace OrderProcessing.Application.Tests.Orders;
+namespace OrderProcessing.Application.Tests.Orders.Resubmit;
 
 public class ResubmitOrderUseCaseLoggingTests : OrderUseCaseTestBase
 {

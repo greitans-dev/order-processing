@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using OrderProcessing.Domain.Orders;
 
-namespace OrderProcessing.Application.Orders;
+namespace OrderProcessing.Application.Orders.Locking;
 
 /// <summary>
 /// Per-key async lock (order numbers and idempotency keys). Must be registered as a singleton. Process-local only.

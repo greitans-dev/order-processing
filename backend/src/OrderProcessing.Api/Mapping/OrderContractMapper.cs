@@ -1,6 +1,7 @@
 using OrderProcessing.Api.Contracts.V1;
 using OrderProcessing.Application.Abstractions;
-using OrderProcessing.Application.Orders;
+using OrderProcessing.Application.Orders.Commands;
+using OrderProcessing.Application.Orders.Results;
 using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
 

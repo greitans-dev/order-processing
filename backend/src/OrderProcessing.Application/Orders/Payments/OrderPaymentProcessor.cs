@@ -1,10 +1,12 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrderProcessing.Application.Abstractions;
+using OrderProcessing.Application.Orders.Locking;
+using OrderProcessing.Application.Orders.Results;
 using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
 
-namespace OrderProcessing.Application.Orders;
+namespace OrderProcessing.Application.Orders.Payments;
 
 public sealed partial class OrderPaymentProcessor(
     IOrderRepository repository,

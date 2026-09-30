@@ -4,7 +4,7 @@ using OrderProcessing.Application.Abstractions;
 using OrderProcessing.Domain.Orders;
 using Shouldly;
 
-namespace OrderProcessing.Application.Tests.Orders;
+namespace OrderProcessing.Application.Tests.Orders.Submit;
 
 public class SubmitOrderUseCaseLoggingTests : OrderUseCaseTestBase
 {

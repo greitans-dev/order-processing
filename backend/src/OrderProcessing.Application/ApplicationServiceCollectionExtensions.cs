@@ -1,5 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
-using OrderProcessing.Application.Orders;
+using OrderProcessing.Application.Orders.Listing;
+using OrderProcessing.Application.Orders.Locking;
+using OrderProcessing.Application.Orders.Payments;
+using OrderProcessing.Application.Orders.Resubmit;
+using OrderProcessing.Application.Orders.Submit;
 
 namespace OrderProcessing.Application;
 

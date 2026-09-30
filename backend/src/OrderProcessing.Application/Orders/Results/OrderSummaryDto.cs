@@ -1,4 +1,4 @@
-namespace OrderProcessing.Application.Orders;
+namespace OrderProcessing.Application.Orders.Results;
 
 public sealed record OrderSummaryDto(
     string OrderNumber, decimal PayableAmount, string CurrencyCode, string PaymentGatewayId,

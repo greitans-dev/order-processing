@@ -1,9 +1,15 @@
 using System.Linq.Expressions;
 using Microsoft.Extensions.Logging.Testing;
-using Moq;
 using Moq.Language.Flow;
+using Moq;
 using OrderProcessing.Application.Abstractions;
-using OrderProcessing.Application.Orders;
+using OrderProcessing.Application.Orders.Commands;
+using OrderProcessing.Application.Orders.Listing;
+using OrderProcessing.Application.Orders.Locking;
+using OrderProcessing.Application.Orders.Payments;
+using OrderProcessing.Application.Orders.Resubmit;
+using OrderProcessing.Application.Orders.Results;
+using OrderProcessing.Application.Orders.Submit;
 using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
 using Shouldly;
