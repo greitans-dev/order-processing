@@ -4,12 +4,10 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Shouldly;
 
-namespace OrderProcessing.Api.Tests;
+namespace OrderProcessing.Api.Tests.Controllers;
 
-public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class OrdersControllerTests(WebApplicationFactory<Program> factory) : ApiTestBase(factory), IClassFixture<WebApplicationFactory<Program>>
 {
-    private readonly HttpClient _client = factory.CreateClient();
-
     private static object Order(decimal amount, string user = "user-1", string gateway = "mock-alpha",
         string currency = "EUR", string? description = "test") =>
         new { userId = user, payableAmount = amount, currencyCode = currency, paymentGatewayId = gateway, description };
@@ -18,11 +16,8 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/orders") { Content = JsonContent.Create(order) };
         if (withKey) request.Headers.Add("Idempotency-Key", key ?? Guid.NewGuid().ToString());
-        return _client.SendAsync(request);
+        return Client.SendAsync(request);
     }
-
-    private static async Task<JsonElement> Json(HttpResponseMessage r) =>
-        (await r.Content.ReadFromJsonAsync<JsonElement>());
 
     [Fact]
     public async Task SubmitOrder_ValidOrder_Returns200WithReceipt()
@@ -72,14 +67,14 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
     [Fact]
     public async Task ResubmitOrder_UnknownOrder_Returns404()
     {
-        var response = await _client.PostAsync("/api/v1/orders/ORD-NOPE/resubmit", null);
+        var response = await Client.PostAsync("/api/v1/orders/ORD-NOPE/resubmit", null);
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task ResubmitOrder_BlankOrderNumber_Returns400()
     {
-        var response = await _client.PostAsync("/api/v1/orders/%20/resubmit", null);
+        var response = await Client.PostAsync("/api/v1/orders/%20/resubmit", null);
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
@@ -89,7 +84,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         var first = await Json(await Submit(Order(20000m)));
         var number = first.GetProperty("orderNumber").GetString();
 
-        var response = await _client.PostAsync($"/api/v1/orders/{number}/resubmit", null);
+        var response = await Client.PostAsync($"/api/v1/orders/{number}/resubmit", null);
 
         response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         (await Json(response)).GetProperty("orderNumber").GetString().ShouldBe(number);
@@ -101,7 +96,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         var first = await Json(await Submit(Order(15m)));
         var number = first.GetProperty("orderNumber").GetString();
 
-        var response = await _client.PostAsync($"/api/v1/orders/{number}/resubmit", null);
+        var response = await Client.PostAsync($"/api/v1/orders/{number}/resubmit", null);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var again = await Json(response);
@@ -118,7 +113,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         await Submit(Order(10m, user: user));
         await Submit(Order(50000m, user: user));
 
-        var response = await _client.GetAsync($"/api/v1/orders?userId={user}");
+        var response = await Client.GetAsync($"/api/v1/orders?userId={user}");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var items = (await Json(response)).EnumerateArray().ToList();
@@ -161,7 +156,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         secondBody.GetProperty("orderNumber").GetString().ShouldBe(firstBody.GetProperty("orderNumber").GetString());
         secondBody.GetProperty("paymentConfirmation").GetString()
             .ShouldBe(firstBody.GetProperty("paymentConfirmation").GetString());
-        (await Json(await _client.GetAsync($"/api/v1/orders?userId={user}"))).GetArrayLength().ShouldBe(1);
+        (await Json(await Client.GetAsync($"/api/v1/orders?userId={user}"))).GetArrayLength().ShouldBe(1);
     }
 
     [Fact]
@@ -187,7 +182,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
         var response = await Submit(Order(31m, user: user), key);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        (await Json(await _client.GetAsync($"/api/v1/orders?userId={user}"))).GetArrayLength().ShouldBe(1);
+        (await Json(await Client.GetAsync($"/api/v1/orders?userId={user}"))).GetArrayLength().ShouldBe(1);
     }
 
     [Fact]
@@ -202,7 +197,7 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
             await Task.Delay(20);
         }
 
-        var items = (await Json(await _client.GetAsync($"/api/v1/orders?userId={user}"))).EnumerateArray().ToList();
+        var items = (await Json(await Client.GetAsync($"/api/v1/orders?userId={user}"))).EnumerateArray().ToList();
 
         items.Select(i => i.GetProperty("orderNumber").GetString()).ShouldBe(Enumerable.Reverse(submitted));
         var created = items.Select(i => i.GetProperty("createdAtUtc").GetDateTimeOffset()).ToList();
@@ -211,102 +206,5 @@ public class OrdersApiTests(WebApplicationFactory<Program> factory) : IClassFixt
 
     [Fact]
     public async Task ListOrders_MissingUserId_Returns400() =>
-        (await _client.GetAsync("/api/v1/orders")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-
-    [Fact]
-    public async Task ListGateways_Default_ReturnsBothMocks()
-    {
-        var items = (await Json(await _client.GetAsync("/api/v1/payment-gateways"))).EnumerateArray().ToList();
-        items.Select(i => i.GetProperty("id").GetString()).ShouldBe(["mock-alpha", "mock-beta"], ignoreOrder: true);
-        items.All(i => !string.IsNullOrEmpty(i.GetProperty("name").GetString())).ShouldBeTrue();
-    }
-
-    [Fact]
-    public async Task ListCurrencies_Default_ReturnsEuro()
-    {
-        var items = (await Json(await _client.GetAsync("/api/v1/currencies"))).EnumerateArray().ToList();
-        var euro = items.ShouldHaveSingleItem();
-        euro.GetProperty("code").GetString().ShouldBe("EUR");
-        euro.GetProperty("name").GetString().ShouldBe("Euro");
-    }
-
-    private async Task<JsonElement> OpenApiDocument() => await Json(await _client.GetAsync("/openapi/v1.json"));
-
-    [Fact]
-    public async Task OpenApi_SubmitOperation_DescribesIdempotencyKeyHeader()
-    {
-        var submit = (await OpenApiDocument()).GetProperty("paths").GetProperty("/api/v1/orders").GetProperty("post");
-
-        var header = submit.GetProperty("parameters").EnumerateArray()
-            .Single(p => p.GetProperty("name").GetString() == "Idempotency-Key");
-        header.GetProperty("in").GetString().ShouldBe("header");
-        header.GetProperty("required").GetBoolean().ShouldBeTrue();
-        header.GetProperty("schema").GetProperty("maxLength").GetInt32().ShouldBe(255);
-        var description = header.GetProperty("description").GetString()!;
-        description.ShouldContain("UUID");
-        description.ShouldContain("255");
-        var operation = submit.GetProperty("description").GetString()!;
-        operation.ShouldContain("Idempotency-Key");
-        operation.ShouldContain("order number");
-        operation.ShouldContain("409");
-    }
-
-    [Theory]
-    [InlineData("/api/v1/orders", "post", new[] { "200", "400", "409", "422" })]
-    [InlineData("/api/v1/orders/{orderNumber}/resubmit", "post", new[] { "200", "404", "422" })]
-    [InlineData("/api/v1/orders", "get", new[] { "200", "400" })]
-    [InlineData("/api/v1/payment-gateways", "get", new[] { "200" })]
-    [InlineData("/api/v1/currencies", "get", new[] { "200" })]
-    public async Task OpenApi_EveryOperation_DocumentsEachResponseWithDescription(string path, string method, string[] codes)
-    {
-        var operation = (await OpenApiDocument()).GetProperty("paths").GetProperty(path).GetProperty(method);
-
-        operation.GetProperty("summary").GetString().ShouldNotBeNullOrWhiteSpace();
-        var responses = operation.GetProperty("responses");
-        foreach (var code in codes)
-            responses.GetProperty(code).GetProperty("description").GetString().ShouldNotBeNullOrWhiteSpace();
-    }
-
-    // A nullable reference to another schema is rendered as oneOf [null, {$ref, description}].
-    private static string? DescriptionOf(JsonElement schema)
-    {
-        if (schema.TryGetProperty("description", out var description)) return description.GetString();
-        return schema.TryGetProperty("oneOf", out var oneOf)
-            ? oneOf.EnumerateArray().Select(DescriptionOf).FirstOrDefault(d => d is not null)
-            : null;
-    }
-
-    [Fact]
-    public async Task OpenApi_Schemas_DescribeEveryProperty()
-    {
-        var schemas = (await OpenApiDocument()).GetProperty("components").GetProperty("schemas");
-
-        foreach (var name in new[] { "SubmitOrderRequest", "OrderReceiptResponse", "OrderErrorResponse", "OrderSummaryResponse" })
-        {
-            var schema = schemas.GetProperty(name);
-            schema.GetProperty("description").GetString().ShouldNotBeNullOrWhiteSpace();
-            foreach (var property in schema.GetProperty("properties").EnumerateObject())
-                DescriptionOf(property.Value).ShouldNotBeNullOrWhiteSpace($"{name}.{property.Name} needs a description");
-        }
-    }
-
-    [Fact]
-    public async Task OpenApi_Info_IsShortAndOmitsIdempotencyOverview()
-    {
-        var info = (await OpenApiDocument()).GetProperty("info");
-
-        info.GetProperty("title").GetString().ShouldBe("Order Processing API");
-        var description = info.GetProperty("description").GetString()!;
-        description.ShouldNotBeNullOrWhiteSpace();
-        description.ToLowerInvariant().ShouldNotContain("idempoten");
-    }
-
-    [Fact]
-    public async Task OpenApi_DocumentAndSwaggerUi_AreServed()
-    {
-        var doc = await _client.GetAsync("/openapi/v1.json");
-        doc.StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await doc.Content.ReadAsStringAsync()).ShouldContain("/api/v1/orders");
-        (await _client.GetAsync("/swagger/index.html")).StatusCode.ShouldBe(HttpStatusCode.OK);
-    }
+        (await Client.GetAsync("/api/v1/orders")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 }
