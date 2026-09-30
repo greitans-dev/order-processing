@@ -2,6 +2,7 @@ using Asp.Versioning;
 using OrderProcessing.Api.ErrorHandling;
 using OrderProcessing.Api.OpenApi;
 using OrderProcessing.Application;
+using OrderProcessing.Application.Orders.Payments;
 using OrderProcessing.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +28,9 @@ builder.Services.AddOpenApi("v1", o =>
     o.AddDocumentTransformer<ApiInfoDocumentTransformer>();
     o.AddOperationTransformer<IdempotencyKeyOperationTransformer>();
 });
+var paymentOptions = new PaymentProcessingOptions();
+builder.Configuration.GetSection(PaymentProcessingOptions.SectionName).Bind(paymentOptions);
+builder.Services.AddSingleton(paymentOptions);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 // Only needed when the Next.js dev server (port 3000) calls the API cross-origin; harmless when served same-origin.

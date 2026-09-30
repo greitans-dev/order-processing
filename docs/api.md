@@ -6,8 +6,8 @@ are the source of truth for schemas. Descriptions in the OpenAPI document come f
 
 | Method | Route | Purpose | Responses |
 |---|---|---|---|
-| `POST` | `/api/v1/orders` | Submit a new order and attempt payment. Requires the `Idempotency-Key` header | `200` receipt; `422` error including `orderNumber`; `409` the key was already used with a different payload; `400` validation failure (missing or invalid `Idempotency-Key`, missing fields, amount <= 0 or with more than 2 decimal places, description > 500, unknown gateway, unsupported currency) |
-| `POST` | `/api/v1/orders/{orderNumber}/resubmit` | Retry payment idempotently | `200` receipt (existing if already paid); `422` declined again; `404` unknown order |
+| `POST` | `/api/v1/orders` | Submit a new order and attempt payment. Requires the `Idempotency-Key` header | `200` receipt; `422` error including `orderNumber`; `409` the key was already used with a different payload; `504` the gateway did not answer in time (see below); `400` validation failure (missing or invalid `Idempotency-Key`, missing fields, amount <= 0 or with more than 2 decimal places, description > 500, unknown gateway, unsupported currency) |
+| `POST` | `/api/v1/orders/{orderNumber}/resubmit` | Retry payment idempotently | `200` receipt (existing if already paid); `422` declined again; `404` unknown order; `504` the gateway did not answer in time |
 | `GET` | `/api/v1/orders?userId=` | A user's order history, newest first (each item has `createdAtUtc`) | `200`; `400` if `userId` is missing |
 | `GET` | `/api/v1/payment-gateways` | Available gateways (`id`, `name`) | `200` |
 | `GET` | `/api/v1/currencies` | Supported currencies (`code`, `name`) | `200` |
@@ -30,3 +30,8 @@ from the response.
 - Keys are scoped to the `userId` in the payload.
 
 A `422` body always contains `orderNumber` and a `message` that is safe to show to the end user.
+
+A `504` means the gateway did not answer within `Payments:GatewayTimeout` (default 30 seconds). The payment may or may
+not have gone through, so the order stays `Pending` (not `Failed`). The problem body contains `orderNumber`. Retry with
+the same `Idempotency-Key`, or resubmit the order. A real gateway must deduplicate on the order number, because the
+retry charges again.

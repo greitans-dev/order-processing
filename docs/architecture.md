@@ -71,11 +71,13 @@ and any `IPaymentGateway` is covered without extra code.
 |---|---|
 | Information | order created, idempotent replay, resubmit requested, order already paid, charge succeeded |
 | Warning | idempotency key reused with a different payload, charge declined (with the reason) |
+| Warning | a gateway did not answer within `Payments:GatewayTimeout`; the order stays `Pending` (HTTP 504) |
 | Error | a gateway threw; the order stays `Pending` and the exception is rethrown |
 | Debug | charge started |
 
 The description and other free text are never logged. Expected failures (`IdempotencyKeyReuseException`,
-`OrderNotFoundException`, `UnknownPaymentGatewayException`, `UnsupportedCurrencyException`) are mapped to problem+json
+`OrderNotFoundException`, `UnknownPaymentGatewayException`, `UnsupportedCurrencyException`,
+`PaymentGatewayTimeoutException`) are mapped to problem+json
 answers by `ApplicationExceptionHandler` in `Api/ErrorHandling`, so controllers have no `try`/`catch` for them and
 they are not logged as errors. Add new mappings there. Unhandled exceptions are logged once by the exception-handler
 middleware, and clients get an `application/problem+json` 500 with a `traceId` and no details. Console scopes are on,

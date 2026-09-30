@@ -24,4 +24,8 @@ public sealed partial class OrderPaymentProcessor
     [LoggerMessage(EventId = 1013, Level = LogLevel.Error,
         Message = "Gateway {GatewayId} threw while charging order {OrderNumber}; the order stays pending")]
     private partial void LogChargeThrew(Exception exception, string orderNumber, string gatewayId);
+
+    [LoggerMessage(EventId = 1014, Level = LogLevel.Warning,
+        Message = "Gateway {GatewayId} did not answer for order {OrderNumber} within {ElapsedMs} ms; the order stays pending")]
+    private partial void LogChargeTimedOut(string orderNumber, string gatewayId, long elapsedMs);
 }

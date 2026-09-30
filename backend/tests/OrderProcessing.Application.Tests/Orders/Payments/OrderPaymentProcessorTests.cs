@@ -73,6 +73,43 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
     }
 
     [Fact]
+    public async Task Process_GatewayDoesNotAnswerInTime_ThrowsTimeoutAndLeavesOrderPending()
+    {
+        PaymentOptions.GatewayTimeout = TimeSpan.FromMilliseconds(50);
+        SetupCharge().Returns(async (PaymentRequest _, CancellationToken token) =>
+        {
+            await Task.Delay(Timeout.Infinite, token);
+            return PaymentResult.Success("never");
+        });
+        var order = SeedOrder("user-1", CreatedAt);
+
+        var ex = await Should.ThrowAsync<PaymentGatewayTimeoutException>(() =>
+            Payments.ProcessAsync(order.OrderNumber, default));
+
+        ex.OrderNumber.ShouldBe(order.OrderNumber);
+        order.Status.ShouldBe(OrderStatus.Pending); // the outcome is unknown, so it is neither Paid nor Failed
+    }
+
+    [Fact]
+    public async Task Process_CallerCancelsWhileGatewayIsSlow_ThrowsCancellationNotTimeout()
+    {
+        SetupCharge().Returns(async (PaymentRequest _, CancellationToken token) =>
+        {
+            await Task.Delay(Timeout.Infinite, token);
+            return PaymentResult.Success("never");
+        });
+        var order = SeedOrder("user-1", CreatedAt);
+        using var cts = new CancellationTokenSource();
+
+        var call = Payments.ProcessAsync(order.OrderNumber, cts.Token);
+        await cts.CancelAsync();
+
+        var ex = await Should.ThrowAsync<OperationCanceledException>(() => call);
+        ex.ShouldNotBeOfType<PaymentGatewayTimeoutException>();
+        order.Status.ShouldBe(OrderStatus.Pending);
+    }
+
+    [Fact]
     public async Task Process_UnknownOrder_ThrowsNotFound() =>
         await Should.ThrowAsync<OrderNotFoundException>(() =>
             Payments.ProcessAsync(new OrderNumber("missing"), default));

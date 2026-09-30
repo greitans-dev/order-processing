@@ -13,6 +13,7 @@ public static class ApplicationServiceCollectionExtensions
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton(new PaymentProcessingOptions());
         return services
             .AddSingleton<OrderNumberLockRegistry>() // must be one instance per process
             .AddScoped<OrderPaymentProcessor>()

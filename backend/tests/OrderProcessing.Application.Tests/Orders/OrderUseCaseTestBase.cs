@@ -23,6 +23,7 @@ public abstract class OrderUseCaseTestBase
         g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>());
 
     protected FakeOrderRepository Repository { get; } = new();
+    protected PaymentProcessingOptions PaymentOptions { get; } = new();
     protected FakeClock Clock { get; } = new(new DateTimeOffset(2026, 3, 4, 5, 6, 7, TimeSpan.Zero));
     private readonly FakeLogCollector _logCollector = new();
     protected Mock<IPaymentGateway> Gateway { get; } = new();
@@ -41,7 +42,7 @@ public abstract class OrderUseCaseTestBase
             .Throws<UnknownPaymentGatewayException>(() => new UnknownPaymentGatewayException("nope"));
         var locks = new OrderNumberLockRegistry();
         // Both classes log into one collector, so tests see the whole flow in order.
-        Payments = new OrderPaymentProcessor(Repository, registry.Object, locks, Clock,
+        Payments = new OrderPaymentProcessor(Repository, registry.Object, locks, Clock, PaymentOptions,
             new FakeLogger<OrderPaymentProcessor>(_logCollector));
         SubmitOrder = new SubmitOrderUseCase(Repository, registry.Object, locks, Payments, Clock,
             new FakeLogger<SubmitOrderUseCase>(_logCollector));

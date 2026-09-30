@@ -19,3 +19,13 @@ public sealed class IdempotencyKeyReuseException(IdempotencyKey key)
 {
     public IdempotencyKey Key { get; } = key;
 }
+
+/// <summary>
+/// The gateway did not answer in time. The charge may still have gone through, so the order is left pending.
+/// </summary>
+public sealed class PaymentGatewayTimeoutException(OrderNumber orderNumber, string gatewayId, TimeSpan timeout)
+    : Exception($"Payment gateway '{gatewayId}' did not answer within {timeout.TotalSeconds:0.##} seconds.")
+{
+    public OrderNumber OrderNumber { get; } = orderNumber;
+    public string GatewayId { get; } = gatewayId;
+}

@@ -44,11 +44,13 @@ public sealed class OrdersController(
     /// <response code="400">The request is invalid: a missing or invalid <c>Idempotency-Key</c>, missing fields, an amount of zero or less or with more than two decimal places, a description over 500 characters, an unknown gateway or an unsupported currency.</response>
     /// <response code="409">The <c>Idempotency-Key</c> was already used with a different payload.</response>
     /// <response code="422">The gateway declined the payment. The body contains the <c>orderNumber</c>, which can be resubmitted.</response>
+    /// <response code="504">The gateway did not answer in time, so the payment may or may not have gone through. The order stays pending. Retry with the same <c>Idempotency-Key</c>. The body contains the <c>orderNumber</c>.</response>
     [HttpPost]
     [ProducesResponseType<OrderReceiptResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<OrderErrorResponse>(StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout)]
     public async Task<IActionResult> Submit(
         SubmitOrderRequest request,
         [FromHeader(Name = ApiHeaders.IdempotencyKey), Required, MaxLength(IdempotencyKey.MaxLength)] string idempotencyKey,
@@ -77,10 +79,12 @@ public sealed class OrdersController(
     /// <response code="200">The order is paid: the receipt (the existing one if it was already paid).</response>
     /// <response code="404">There is no order with this number.</response>
     /// <response code="422">The gateway declined the payment again.</response>
+    /// <response code="504">The gateway did not answer in time. The order stays pending and can be resubmitted again.</response>
     [HttpPost("{orderNumber}/resubmit")]
     [ProducesResponseType<OrderReceiptResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<OrderErrorResponse>(StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout)]
     public async Task<IActionResult> Resubmit(string orderNumber, CancellationToken ct)
     {
         return ToActionResult(await resubmitOrder.ExecuteAsync(new ResubmitOrderCommand(new OrderNumber(orderNumber)), ct));

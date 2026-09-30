@@ -40,6 +40,14 @@ public sealed class ApplicationExceptionHandler(IProblemDetailsService problemDe
             Title = "Order not found",
             Detail = exception.Message
         },
+        PaymentGatewayTimeoutException timeout => new ProblemDetails
+        {
+            Status = StatusCodes.Status504GatewayTimeout,
+            Title = "Payment gateway timeout",
+            Detail = "The payment gateway did not answer in time, so the payment may or may not have gone through. "
+                     + "Retry with the same Idempotency-Key, or resubmit the order.",
+            Extensions = { ["orderNumber"] = timeout.OrderNumber.Value }
+        },
         UnknownPaymentGatewayException =>
             Invalid(nameof(SubmitOrderRequest.PaymentGatewayId), exception.Message),
         UnsupportedCurrencyException =>
