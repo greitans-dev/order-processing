@@ -13,7 +13,7 @@ public class ResubmitOrderUseCaseTests : OrderUseCaseTestBase
         var failed = await SeedFailedOrder();
         GatewaySucceeds();
 
-        var result = await Resubmit.ExecuteAsync(failed.OrderNumber, default);
+        var result = await Resubmit.ExecuteAsync(new ResubmitOrderCommand(failed.OrderNumber), default);
 
         result.ShouldBeOfType<OrderProcessingResult.Paid>();
         result.OrderNumber.ShouldBe(failed.OrderNumber.Value);
