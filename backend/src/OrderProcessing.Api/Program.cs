@@ -42,6 +42,6 @@ app.MapOpenApi();
 app.UseSwaggerUI(o => o.SwaggerEndpoint("/openapi/v1.json", "Order Processing API v1"));
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program;
