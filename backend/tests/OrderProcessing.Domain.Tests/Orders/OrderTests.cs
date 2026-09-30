@@ -10,8 +10,11 @@ public class OrderTests
 
     private static readonly DateTimeOffset CreatedAt = new(2026, 1, 2, 3, 4, 5, TimeSpan.Zero);
 
-    private static Order NewOrder() =>
-        Order.Create("user-1", Key, CreatedAt, Money.Of(50m, "EUR"), new PaymentGatewayId("mock-alpha"), "notes");
+    private static readonly Money Amount = Money.Of(50m, "EUR");
+
+    private static readonly PaymentGatewayId Gateway = new("mock-alpha");
+
+    private static Order NewOrder() => Order.Create("user-1", Key, CreatedAt, Amount, Gateway, "notes");
 
     private static Receipt ReceiptFor(Order o) =>
         new(o.OrderNumber, o.PayableAmount, DateTimeOffset.UtcNow, "CONF-1");
@@ -81,8 +84,7 @@ public class OrderTests
 
     [Fact]
     public void MatchesRequest_IdenticalRequest_ReturnsTrue() =>
-        NewOrder().MatchesRequest("user-1", Money.Of(50m, "EUR"), new PaymentGatewayId("mock-alpha"), "notes")
-            .ShouldBeTrue();
+        NewOrder().MatchesRequest("user-1", Amount, Gateway, "notes").ShouldBeTrue();
 
     [Theory]
     [InlineData("user-2", 50, "mock-alpha", "notes")]
