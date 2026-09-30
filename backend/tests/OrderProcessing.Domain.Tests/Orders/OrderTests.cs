@@ -2,7 +2,7 @@ using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
 using Shouldly;
 
-namespace OrderProcessing.Domain.Tests;
+namespace OrderProcessing.Domain.Tests.Orders;
 
 public class OrderTests
 {

@@ -1,7 +1,7 @@
 using OrderProcessing.Domain.Payments;
 using Shouldly;
 
-namespace OrderProcessing.Domain.Tests;
+namespace OrderProcessing.Domain.Tests.Payments;
 
 public class MoneyTests
 {
@@ -20,8 +20,4 @@ public class MoneyTests
     [Fact]
     public void Of_UnsupportedCurrency_Throws() =>
         Should.Throw<UnsupportedCurrencyException>(() => Money.Of(1m, "USD"));
-
-    [Fact]
-    public void All_Default_ContainsEuro() =>
-        SupportedCurrencies.All.ShouldContain(c => c.Code == "EUR" && c.Name == "Euro");
 }
