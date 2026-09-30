@@ -18,14 +18,14 @@ implementations only in `Infrastructure.Persistence`.
 
 - **Domain**: `Order` aggregate (`Pending` / `Paid` / `Failed`), `OrderNumber`, `Receipt`, `Money` (amount plus
   currency code), `PaymentGatewayId`, and the static `SupportedCurrencies` list (`EUR` only).
-- **Application**: `OrderProcessingService` (use cases), the `IOrderRepository`, `IPaymentGateway` and
+- **Application**: `OrderProcessingService` (use cases), `OrderPaymentProcessor` (the locked charge step), the `IOrderRepository`, `IPaymentGateway` and
   `IPaymentGatewayRegistry` abstractions, and use-case DTOs. These DTOs stay separate from the API's wire contracts.
 - **Infrastructure**: in-memory repository, the mock gateways, and the gateway registry.
 - **Api**: versioned controllers, wire contracts (`Contracts/V1`), `OrderContractMapper`, OpenAPI and Swagger UI.
 
 ## Idempotency and concurrency
 
-Submit and resubmit both run through `OrderProcessingService.ProcessPaymentAsync`:
+Submit and resubmit both run through `OrderPaymentProcessor.ProcessAsync`:
 
 1. Take a per-order-number lock (`OrderNumberLockRegistry`, a singleton holding one `SemaphoreSlim` per order number).
 2. Re-fetch the order under the lock.
@@ -51,9 +51,9 @@ cannot deadlock.
 
 ## Logging
 
-`OrderProcessingService` logs through `ILogger` with source-generated `[LoggerMessage]` methods
-(`OrderProcessingService.Logging.cs`, event ids 1000+). Every line carries the order number and, where relevant, the user
-and gateway. Because all charges go through the service, gateway calls are logged in one place (duration and outcome)
+`OrderProcessingService` and `OrderPaymentProcessor` log through `ILogger` with source-generated `[LoggerMessage]`
+methods (`*.Logging.cs`, event ids 1000+; 1000-1003 in the service, 1004 and 1010-1013 in the processor). Every line carries the order number and, where relevant, the user
+and gateway. Because all charges go through the processor, gateway calls are logged in one place (duration and outcome)
 and any `IPaymentGateway` is covered without extra code.
 
 | Level | Events |
