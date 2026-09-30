@@ -10,7 +10,7 @@ using Shouldly;
 
 namespace OrderProcessing.Application.Tests.Orders;
 
-public abstract class OrderProcessingServiceTestBase
+public abstract class OrderUseCaseTestBase
 {
     protected const string SharedKey = "k1";
     private const int ConcurrentCalls = 5;
@@ -22,11 +22,11 @@ public abstract class OrderProcessingServiceTestBase
     private readonly FakeLogCollector _logCollector = new();
     protected Mock<IPaymentGateway> Gateway { get; } = new();
     protected OrderPaymentProcessor Payments { get; }
-    protected OrderProcessingService Sut { get; }
+    protected SubmitOrderUseCase SubmitOrder { get; }
     protected ResubmitOrderUseCase Resubmit { get; }
     protected GetUserOrdersUseCase GetUserOrders { get; }
 
-    protected OrderProcessingServiceTestBase()
+    protected OrderUseCaseTestBase()
     {
         Gateway.SetupGet(g => g.GatewayId).Returns("test-gw");
         var registry = new Mock<IPaymentGatewayRegistry>();
@@ -38,8 +38,8 @@ public abstract class OrderProcessingServiceTestBase
         // Both classes log into one collector, so tests see the whole flow in order.
         Payments = new OrderPaymentProcessor(Repository, registry.Object, locks,
             new FakeLogger<OrderPaymentProcessor>(_logCollector));
-        Sut = new OrderProcessingService(Repository, registry.Object, locks, Payments,
-            new FakeLogger<OrderProcessingService>(_logCollector));
+        SubmitOrder = new SubmitOrderUseCase(Repository, registry.Object, locks, Payments,
+            new FakeLogger<SubmitOrderUseCase>(_logCollector));
         Resubmit = new ResubmitOrderUseCase(Payments, new FakeLogger<ResubmitOrderUseCase>(_logCollector));
         GetUserOrders = new GetUserOrdersUseCase(Repository);
     }
@@ -87,7 +87,7 @@ public abstract class OrderProcessingServiceTestBase
     protected async Task<Order> SeedFailedOrder()
     {
         GatewayDeclines();
-        var result = await Sut.SubmitNewOrderAsync(Command(), default);
+        var result = await SubmitOrder.ExecuteAsync(Command(), default);
         return (await Repository.FindByOrderNumberAsync(new OrderNumber(result.OrderNumber), default))!;
     }
 }

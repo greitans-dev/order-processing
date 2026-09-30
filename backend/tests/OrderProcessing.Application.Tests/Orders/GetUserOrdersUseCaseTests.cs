@@ -2,7 +2,7 @@ using Shouldly;
 
 namespace OrderProcessing.Application.Tests.Orders;
 
-public class GetUserOrdersUseCaseTests : OrderProcessingServiceTestBase
+public class GetUserOrdersUseCaseTests : OrderUseCaseTestBase
 {
     [Fact]
     public async Task Execute_MultipleOrders_ReturnsNewestFirstWithCreationTime()
@@ -37,8 +37,8 @@ public class GetUserOrdersUseCaseTests : OrderProcessingServiceTestBase
     public async Task Execute_OtherUsersHaveOrders_ReturnsOnlyThatUsersOrders()
     {
         GatewaySucceeds();
-        await Sut.SubmitNewOrderAsync(Command(5m), default);
-        await Sut.SubmitNewOrderAsync(Command(6m) with { UserId = "other" }, default);
+        await SubmitOrder.ExecuteAsync(Command(5m), default);
+        await SubmitOrder.ExecuteAsync(Command(6m) with { UserId = "other" }, default);
 
         var orders = await GetUserOrders.ExecuteAsync("user-1", default);
 

@@ -3,13 +3,13 @@ using OrderProcessing.Domain.Orders;
 
 namespace OrderProcessing.Application.Tests.Orders;
 
-public class ResubmitOrderUseCaseLoggingTests : OrderProcessingServiceTestBase
+public class ResubmitOrderUseCaseLoggingTests : OrderUseCaseTestBase
 {
     [Fact]
     public async Task Execute_PaidOrder_LogsWithoutCallingGateway()
     {
         GatewaySucceeds();
-        var first = await Sut.SubmitNewOrderAsync(Command(), default);
+        var first = await SubmitOrder.ExecuteAsync(Command(), default);
         ClearLogs();
 
         await Resubmit.ExecuteAsync(new OrderNumber(first.OrderNumber), default);

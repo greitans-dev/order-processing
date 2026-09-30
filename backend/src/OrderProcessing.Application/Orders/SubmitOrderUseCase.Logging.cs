@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 namespace OrderProcessing.Application.Orders;
 
 // Never log the order description (free text) or full payloads.
-public sealed partial class OrderProcessingService
+public sealed partial class SubmitOrderUseCase
 {
     [LoggerMessage(EventId = 1000, Level = LogLevel.Information,
         Message = "Order {OrderNumber} created for user {UserId}: {Amount} {Currency} via gateway {GatewayId}")]

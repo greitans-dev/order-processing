@@ -6,14 +6,14 @@ using Shouldly;
 
 namespace OrderProcessing.Application.Tests.Orders;
 
-public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
+public class SubmitOrderUseCaseLoggingTests : OrderUseCaseTestBase
 {
     [Fact]
     public async Task SubmitNewOrder_GatewaySucceeds_LogsCreationAndChargeWithOrderContext()
     {
         GatewaySucceeds();
 
-        var result = await Sut.SubmitNewOrderAsync(Command(42.5m), default);
+        var result = await SubmitOrder.ExecuteAsync(Command(42.5m), default);
 
         var created = Logs.Single(l => l.Level == LogLevel.Information && l.Message.Contains("created"));
         created.Message.ShouldContain(result.OrderNumber);
@@ -30,7 +30,7 @@ public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
     {
         GatewayDeclines();
 
-        var result = await Sut.SubmitNewOrderAsync(Command(), default);
+        var result = await SubmitOrder.ExecuteAsync(Command(), default);
 
         var declined = Logs.Single(l => l.Level == LogLevel.Warning);
         declined.Message.ShouldContain(result.OrderNumber);
@@ -41,10 +41,10 @@ public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
     public async Task SubmitNewOrder_ReplayedKey_LogsReplayWithoutSecondCharge()
     {
         GatewaySucceeds();
-        var first = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
+        var first = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
         ClearLogs();
 
-        await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
+        await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
 
         Logs.ShouldContain(l => l.Level == LogLevel.Information && l.Message.Contains("replay")
             && l.Message.Contains(first.OrderNumber));
@@ -56,11 +56,11 @@ public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
     public async Task SubmitNewOrder_SameKeyDifferentPayload_LogsWarning()
     {
         GatewaySucceeds();
-        var first = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
+        var first = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
         ClearLogs();
 
         await Should.ThrowAsync<IdempotencyKeyReuseException>(() =>
-            Sut.SubmitNewOrderAsync(Command(101m, key: SharedKey), default));
+            SubmitOrder.ExecuteAsync(Command(101m, key: SharedKey), default));
 
         var warning = Logs.Single(l => l.Level == LogLevel.Warning);
         warning.Message.ShouldContain(SharedKey);
@@ -75,7 +75,7 @@ public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
         SetupCharge().ThrowsAsync(boom);
 
         var thrown = await Should.ThrowAsync<InvalidOperationException>(() =>
-            Sut.SubmitNewOrderAsync(Command(), default));
+            SubmitOrder.ExecuteAsync(Command(), default));
 
         thrown.ShouldBeSameAs(boom);
         var order = Repository.All.Single();
@@ -90,8 +90,8 @@ public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
     public async Task SubmitNewOrder_DescriptionProvided_NeverLogsDescription()
     {
         GatewayDeclines();
-        await Sut.SubmitNewOrderAsync(Command(key: SharedKey) with { Description = "secret-note" }, default);
-        await Sut.SubmitNewOrderAsync(Command(key: SharedKey) with { Description = "secret-note" }, default);
+        await SubmitOrder.ExecuteAsync(Command(key: SharedKey) with { Description = "secret-note" }, default);
+        await SubmitOrder.ExecuteAsync(Command(key: SharedKey) with { Description = "secret-note" }, default);
 
         Logs.ShouldNotBeEmpty();
         Logs.ShouldNotContain(l => l.Message.Contains("secret-note"));

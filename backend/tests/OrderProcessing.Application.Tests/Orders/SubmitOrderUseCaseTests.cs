@@ -7,14 +7,14 @@ using Shouldly;
 
 namespace OrderProcessing.Application.Tests.Orders;
 
-public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
+public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
 {
     [Fact]
     public async Task SubmitNewOrder_GatewaySucceeds_ReturnsReceiptAndMarksPaid()
     {
         GatewaySucceeds();
 
-        var result = await Sut.SubmitNewOrderAsync(Command(42.5m), default);
+        var result = await SubmitOrder.ExecuteAsync(Command(42.5m), default);
 
         result.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
         result.Receipt.ShouldNotBeNull();
@@ -30,7 +30,7 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     {
         GatewayDeclines();
 
-        var result = await Sut.SubmitNewOrderAsync(Command(), default);
+        var result = await SubmitOrder.ExecuteAsync(Command(), default);
 
         result.Outcome.ShouldBe(OrderProcessingOutcome.Failed);
         result.Error.ShouldNotBeNull().Message.ShouldBe("Declined: limit");
@@ -42,7 +42,7 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     public async Task SubmitNewOrder_UnknownGateway_ThrowsAndPersistsNothing()
     {
         await Should.ThrowAsync<UnknownPaymentGatewayException>(
-            () => Sut.SubmitNewOrderAsync(Command(gateway: "ghost"), default));
+            () => SubmitOrder.ExecuteAsync(Command(gateway: "ghost"), default));
         Repository.All.ShouldBeEmpty();
     }
 
@@ -50,7 +50,7 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     public async Task SubmitNewOrder_UnsupportedCurrency_ThrowsAndPersistsNothing()
     {
         await Should.ThrowAsync<UnsupportedCurrencyException>(
-            () => Sut.SubmitNewOrderAsync(Command(currency: "USD"), default));
+            () => SubmitOrder.ExecuteAsync(Command(currency: "USD"), default));
         Repository.All.ShouldBeEmpty();
     }
 
@@ -59,8 +59,8 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     {
         GatewaySucceeds();
 
-        var first = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
-        var second = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
+        var first = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
+        var second = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
 
         first.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
         second.Outcome.ShouldBe(OrderProcessingOutcome.AlreadyPaid);
@@ -75,8 +75,8 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     {
         GatewayDeclines();
 
-        var first = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
-        var second = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
+        var first = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
+        var second = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
 
         second.Outcome.ShouldBe(OrderProcessingOutcome.Failed);
         second.OrderNumber.ShouldBe(first.OrderNumber);
@@ -89,11 +89,11 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     public async Task SubmitNewOrder_ReplayAfterSuccessfulResubmit_ReturnsAlreadyPaid()
     {
         GatewayDeclines();
-        var failed = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
+        var failed = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
         GatewaySucceeds();
         await Resubmit.ExecuteAsync(new OrderNumber(failed.OrderNumber), default);
 
-        var replay = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
+        var replay = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
 
         replay.Outcome.ShouldBe(OrderProcessingOutcome.AlreadyPaid);
         replay.OrderNumber.ShouldBe(failed.OrderNumber);
@@ -103,11 +103,11 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     public async Task SubmitNewOrder_SameKeyDifferentPayload_ThrowsAndDoesNotCharge()
     {
         GatewaySucceeds();
-        await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
+        await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
         Gateway.Invocations.Clear();
 
         await Should.ThrowAsync<IdempotencyKeyReuseException>(() =>
-            Sut.SubmitNewOrderAsync(Command(101m, key: SharedKey), default));
+            SubmitOrder.ExecuteAsync(Command(101m, key: SharedKey), default));
 
         Repository.All.Count.ShouldBe(1);
         VerifyChargeCalls(Times.Never);
@@ -118,8 +118,8 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     {
         GatewaySucceeds();
 
-        var a = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
-        var b = await Sut.SubmitNewOrderAsync(Command(key: SharedKey) with { UserId = "other" }, default);
+        var a = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
+        var b = await SubmitOrder.ExecuteAsync(Command(key: SharedKey) with { UserId = "other" }, default);
 
         b.OrderNumber.ShouldNotBe(a.OrderNumber);
         b.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
@@ -131,7 +131,7 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     {
         GatewaySucceedsSlowly();
 
-        var results = await RunConcurrently(() => Sut.SubmitNewOrderAsync(Command(key: SharedKey), default));
+        var results = await RunConcurrently(() => SubmitOrder.ExecuteAsync(Command(key: SharedKey), default));
 
         VerifyChargeCalls(Times.Once);
         ShouldHaveOnePaidAndRestAlreadyPaid(results);

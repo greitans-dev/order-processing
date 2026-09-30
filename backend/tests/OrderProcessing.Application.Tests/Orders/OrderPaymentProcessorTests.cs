@@ -7,7 +7,7 @@ using Shouldly;
 
 namespace OrderProcessing.Application.Tests.Orders;
 
-public class OrderPaymentProcessorTests : OrderProcessingServiceTestBase
+public class OrderPaymentProcessorTests : OrderUseCaseTestBase
 {
     private static readonly DateTimeOffset CreatedAt = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 

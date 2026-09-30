@@ -5,14 +5,14 @@ using OrderProcessing.Domain.Payments;
 
 namespace OrderProcessing.Application.Orders;
 
-public sealed partial class OrderProcessingService(
+public sealed partial class SubmitOrderUseCase(
     IOrderRepository repository,
     IPaymentGatewayRegistry gatewayRegistry,
     OrderNumberLockRegistry locks,
     OrderPaymentProcessor payments,
-    ILogger<OrderProcessingService> logger)
+    ILogger<SubmitOrderUseCase> logger)
 {
-    public async Task<OrderProcessingResult> SubmitNewOrderAsync(SubmitOrderCommand command, CancellationToken ct)
+    public async Task<OrderProcessingResult> ExecuteAsync(SubmitOrderCommand command, CancellationToken ct)
     {
         var gatewayId = new PaymentGatewayId(command.PaymentGatewayId);
         gatewayRegistry.Resolve(gatewayId); // fail fast: never persist an order for an unknown gateway

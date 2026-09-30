@@ -18,7 +18,8 @@ implementations only in `Infrastructure.Persistence`.
 
 - **Domain**: `Order` aggregate (`Pending` / `Paid` / `Failed`), `OrderNumber`, `Receipt`, `Money` (amount plus
   currency code), `PaymentGatewayId`, and the static `SupportedCurrencies` list (`EUR` only).
-- **Application**: `OrderProcessingService` (use cases), `OrderPaymentProcessor` (the locked charge step), the `IOrderRepository`, `IPaymentGateway` and
+- **Application**: one class per use case (`SubmitOrderUseCase`, `ResubmitOrderUseCase`, `GetUserOrdersUseCase`, each with `ExecuteAsync`),
+  `OrderPaymentProcessor` (the locked charge step they share), the `IOrderRepository`, `IPaymentGateway` and
   `IPaymentGatewayRegistry` abstractions, and use-case DTOs. These DTOs stay separate from the API's wire contracts.
 - **Infrastructure**: in-memory repository, the mock gateways, and the gateway registry.
 - **Api**: versioned controllers, wire contracts (`Contracts/V1`), `OrderContractMapper`, OpenAPI and Swagger UI.
@@ -37,22 +38,23 @@ guarantee. Resubmission reuses the same order number. Two concurrent resubmits t
 
 New submissions are made idempotent by a client-generated `Idempotency-Key` (the `IdempotencyKey` value object,
 stored on the `Order`). It is separate from the order number, which is server-generated and unknown to the client
-when a request has to be retried. `SubmitNewOrderAsync` works as follows:
+when a request has to be retried. `SubmitOrderUseCase` works as follows:
 
 1. Take a lock on `(userId, key)` from the same `OrderNumberLockRegistry`.
 2. Look the order up with `IOrderRepository.FindByIdempotencyKeyAsync`.
 3. If none exists, create the order and process it. `InMemoryOrderRepository` also enforces key uniqueness per user.
 4. If one exists and `Order.MatchesRequest` is false, throw `IdempotencyKeyReuseException` (HTTP 409).
 5. Otherwise replay: a `Failed` order returns its stored failure without calling the gateway, anything else goes
-   through `ProcessPaymentAsync`, which returns the receipt for a `Paid` order.
+   through `OrderPaymentProcessor.ProcessAsync`, which returns the receipt for a `Paid` order.
 
 The `(userId, key)` lock is always taken before the order-number lock, and resubmit only takes the latter, so the two
 cannot deadlock.
 
 ## Logging
 
-`OrderProcessingService` and `OrderPaymentProcessor` log through `ILogger` with source-generated `[LoggerMessage]`
-methods (`*.Logging.cs`, event ids 1000+; 1000-1003 in the service, 1004 and 1010-1013 in the processor). Every line carries the order number and, where relevant, the user
+The use cases and `OrderPaymentProcessor` log through `ILogger` with source-generated `[LoggerMessage]`
+methods (event ids 1000+; 1000-1002 in `SubmitOrderUseCase`, 1003 in `ResubmitOrderUseCase`, 1004 and 1010-1013 in the
+processor). Every line carries the order number and, where relevant, the user
 and gateway. Because all charges go through the processor, gateway calls are logged in one place (duration and outcome)
 and any `IPaymentGateway` is covered without extra code.
 

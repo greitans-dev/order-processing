@@ -4,7 +4,7 @@ using Shouldly;
 
 namespace OrderProcessing.Application.Tests.Orders;
 
-public class ResubmitOrderUseCaseTests : OrderProcessingServiceTestBase
+public class ResubmitOrderUseCaseTests : OrderUseCaseTestBase
 {
     [Fact]
     public async Task Execute_FailedOrderAndGatewaySucceeds_PaysAndReusesOrderNumber()

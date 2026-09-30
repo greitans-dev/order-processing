@@ -15,7 +15,7 @@ namespace OrderProcessing.Api.Controllers;
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
 [Route("api/v{version:apiVersion}/orders")]
 public sealed class OrdersController(
-    OrderProcessingService service,
+    SubmitOrderUseCase submitOrder,
     ResubmitOrderUseCase resubmitOrder,
     GetUserOrdersUseCase getUserOrders) : ControllerBase
 {
@@ -65,7 +65,7 @@ public sealed class OrdersController(
 
         try
         {
-            return ToActionResult(await service.SubmitNewOrderAsync(request.ToCommand(key), ct));
+            return ToActionResult(await submitOrder.ExecuteAsync(request.ToCommand(key), ct));
         }
         catch (IdempotencyKeyReuseException ex)
         {
