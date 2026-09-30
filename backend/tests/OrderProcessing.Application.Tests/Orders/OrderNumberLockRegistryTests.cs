@@ -2,7 +2,7 @@ using OrderProcessing.Application.Orders;
 using OrderProcessing.Domain.Orders;
 using Shouldly;
 
-namespace OrderProcessing.Application.Tests;
+namespace OrderProcessing.Application.Tests.Orders;
 
 public class OrderNumberLockRegistryTests
 {

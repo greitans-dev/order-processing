@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using OrderProcessing.Application.Abstractions;
 using OrderProcessing.Domain.Orders;
 
-namespace OrderProcessing.Application.Tests;
+namespace OrderProcessing.Application.Tests.Orders;
 
 internal sealed class FakeOrderRepository : IOrderRepository
 {
