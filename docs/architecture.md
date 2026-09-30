@@ -31,7 +31,7 @@ implementations only in `Infrastructure.Persistence`.
 
 Submit and resubmit both run through `OrderPaymentProcessor.ProcessAsync`:
 
-1. Take a per-order-number lock (`OrderNumberLockRegistry`, a singleton holding one `SemaphoreSlim` per order number).
+1. Take a per-order-number lock (`OrderLockRegistry`, a singleton holding one `SemaphoreSlim` per order number).
 2. Re-fetch the order under the lock.
 3. If it is already `Paid`, return the existing receipt without calling the gateway.
 4. Otherwise charge the gateway and persist `Paid` or `Failed`.
@@ -43,7 +43,7 @@ New submissions are made idempotent by a client-generated `Idempotency-Key` (the
 stored on the `Order`). It is separate from the order number, which is server-generated and unknown to the client
 when a request has to be retried. `SubmitOrderUseCase` works as follows:
 
-1. Take a lock on `(userId, key)` from the same `OrderNumberLockRegistry`.
+1. Take a lock on `(userId, key)` from the same `OrderLockRegistry`.
 2. Look the order up with `IOrderRepository.FindByIdempotencyKeyAsync`.
 3. If none exists, create the order and process it. `InMemoryOrderRepository` also enforces key uniqueness per user.
 4. If one exists and `Order.MatchesRequest` is false, throw `IdempotencyKeyReuseException` (HTTP 409).
@@ -82,7 +82,7 @@ gateways, with no identity provider, database or secrets. Both gaps sit behind n
 - **Authentication:** the frontend "signs in" with any user id (kept in `localStorage`), and the backend trusts the
   `userId` in the payload and in `GET /orders?userId=`. Any caller can act as, and read the orders of, any user. To add
   it, take the user id from a token and authorize `GET /orders` to the caller's own orders.
-- **Persistence:** `InMemoryOrderRepository` is the only `IOrderRepository`, and `OrderNumberLockRegistry` holds its
+- **Persistence:** `InMemoryOrderRepository` is the only `IOrderRepository`, and `OrderLockRegistry` holds its
   locks in process memory. Orders and keys are lost on restart, and the no-double-charge guarantee holds for a single
   API instance only. To add it, implement `IOrderRepository` in `Infrastructure.Persistence` with unique constraints on
   the order number and on `(UserId, IdempotencyKey)`, and replace the process-local lock with a distributed lock or

@@ -10,7 +10,7 @@ namespace OrderProcessing.Application.Orders.Submit;
 public sealed partial class SubmitOrderUseCase(
     IOrderRepository repository,
     IPaymentGatewayRegistry gatewayRegistry,
-    OrderNumberLockRegistry locks,
+    OrderLockRegistry locks,
     OrderPaymentProcessor payments,
     TimeProvider clock,
     ILogger<SubmitOrderUseCase> logger)

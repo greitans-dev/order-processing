@@ -43,7 +43,7 @@ Read the matching doc before working in that area:
 
 ## Layout and commands
 
-- `backend/` holds `OrderProcessing.sln` and `src/{Domain,Application,Infrastructure,Api}`, with matching `tests/*.Tests` projects. Architecture tests live in their own project, `OrderProcessing.ArchitectureTests`, as the spec requires. Tests mirror the namespace of the class under test with `.Tests` added to the assembly part, so `OrderProcessing.Application.Orders.Locking.OrderNumberLockRegistry` is tested in `OrderProcessing.Application.Tests.Orders.Locking` (same folder structure, one `<Class>Tests` per class).
+- `backend/` holds `OrderProcessing.sln` and `src/{Domain,Application,Infrastructure,Api}`, with matching `tests/*.Tests` projects. Architecture tests live in their own project, `OrderProcessing.ArchitectureTests`, as the spec requires. Tests mirror the namespace of the class under test with `.Tests` added to the assembly part, so `OrderProcessing.Application.Orders.Locking.OrderLockRegistry` is tested in `OrderProcessing.Application.Tests.Orders.Locking` (same folder structure, one `<Class>Tests` per class).
 - `frontend/` holds the Next.js app under `src/{app,components,context,services,types,validation}`.
 - Backend tests: `dotnet test backend/OrderProcessing.sln`. Single test: `dotnet test backend/OrderProcessing.sln --filter "FullyQualifiedName~<TestName>"`.
 - Frontend tests: `cd frontend && pnpm test` (Jest).

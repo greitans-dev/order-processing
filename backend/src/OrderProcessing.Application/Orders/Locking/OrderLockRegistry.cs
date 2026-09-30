@@ -3,11 +3,11 @@ using OrderProcessing.Domain.Orders;
 namespace OrderProcessing.Application.Orders.Locking;
 
 /// <summary>
-/// Per-key async lock (order numbers and idempotency keys). Must be registered as a singleton. Process-local only.
+/// Per-key async lock for orders, keyed by order number or by user and idempotency key. Must be registered as a singleton. Process-local only.
 /// An entry exists only while someone holds or waits for its lock, so the registry does not grow with the number of
 /// keys seen.
 /// </summary>
-public sealed class OrderNumberLockRegistry
+public sealed class OrderLockRegistry
 {
     private readonly Dictionary<string, Entry> _entries = new();
 
@@ -66,7 +66,7 @@ public sealed class OrderNumberLockRegistry
         public int Users { get; set; } // guarded by the registry's lock
     }
 
-    private sealed class Releaser(OrderNumberLockRegistry registry, string lockKey, Entry entry) : IDisposable
+    private sealed class Releaser(OrderLockRegistry registry, string lockKey, Entry entry) : IDisposable
     {
         private int _disposed;
 

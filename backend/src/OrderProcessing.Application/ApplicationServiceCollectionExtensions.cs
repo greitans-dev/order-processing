@@ -14,7 +14,7 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton(new PaymentProcessingOptions());
         return services
-            .AddSingleton<OrderNumberLockRegistry>() // must be one instance per process
+            .AddSingleton<OrderLockRegistry>() // must be one instance per process
             .AddScoped<OrderPaymentProcessor>()
             .AddScoped<SubmitOrderUseCase>()
             .AddScoped<GetUserOrdersUseCase>();

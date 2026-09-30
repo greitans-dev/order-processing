@@ -38,7 +38,7 @@ public abstract class OrderUseCaseTestBase
             .Returns(Gateway.Object);
         registry.Setup(r => r.Resolve(It.Is<PaymentGatewayId>(id => id.Value != "test-gw")))
             .Throws<UnknownPaymentGatewayException>(() => new UnknownPaymentGatewayException("nope"));
-        var locks = new OrderNumberLockRegistry();
+        var locks = new OrderLockRegistry();
         // Both classes log into one collector, so tests see the whole flow in order.
         Payments = new OrderPaymentProcessor(Repository, registry.Object, locks, Clock, PaymentOptions,
             new FakeLogger<OrderPaymentProcessor>(_logCollector));

@@ -10,7 +10,7 @@ namespace OrderProcessing.Application.Orders.Payments;
 public sealed partial class OrderPaymentProcessor(
     IOrderRepository repository,
     IPaymentGatewayRegistry gatewayRegistry,
-    OrderNumberLockRegistry locks,
+    OrderLockRegistry locks,
     TimeProvider clock,
     PaymentProcessingOptions options,
     ILogger<OrderPaymentProcessor> logger)
