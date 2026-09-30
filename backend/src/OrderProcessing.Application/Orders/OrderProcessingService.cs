@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrderProcessing.Application.Abstractions;
 using OrderProcessing.Domain.Orders;
@@ -10,6 +9,7 @@ public sealed partial class OrderProcessingService(
     IOrderRepository repository,
     IPaymentGatewayRegistry gatewayRegistry,
     OrderNumberLockRegistry locks,
+    OrderPaymentProcessor payments,
     ILogger<OrderProcessingService> logger)
 {
     public async Task<OrderProcessingResult> SubmitNewOrderAsync(SubmitOrderCommand command, CancellationToken ct)
@@ -31,7 +31,7 @@ public sealed partial class OrderProcessingService(
             // Replay: a failed order is only retried through resubmit, never by repeating the key.
             return existingOrder.Status == OrderStatus.Failed
                 ? OrderProcessingResult.Failure(existingOrder.OrderNumber.Value, existingOrder.FailureReason!)
-                : await ProcessPaymentAsync(existingOrder.OrderNumber, ct);
+                : await payments.ProcessAsync(existingOrder.OrderNumber, ct);
         }
 
         var newOrder = Order.Create(
@@ -43,13 +43,13 @@ public sealed partial class OrderProcessingService(
             command.Description);
         await repository.AddAsync(newOrder, ct);
         LogOrderCreated(newOrder.OrderNumber.Value, newOrder.UserId, amount.Amount, amount.CurrencyCode, gatewayId.Value);
-        return await ProcessPaymentAsync(newOrder.OrderNumber, ct);
+        return await payments.ProcessAsync(newOrder.OrderNumber, ct);
     }
 
     public Task<OrderProcessingResult> ResubmitOrderAsync(OrderNumber orderNumber, CancellationToken ct)
     {
         LogResubmitRequested(orderNumber.Value);
-        return ProcessPaymentAsync(orderNumber, ct);
+        return payments.ProcessAsync(orderNumber, ct);
     }
 
     public async Task<IReadOnlyList<OrderSummaryDto>> GetOrdersForUserAsync(string userId, CancellationToken ct)
@@ -59,49 +59,5 @@ public sealed partial class OrderProcessingService(
             .OrderByDescending(o => o.CreatedAtUtc)
             .ThenBy(o => o.OrderNumber.Value).Select(OrderDtoMapper.ToSummary)
             .ToList();
-    }
-
-    private async Task<OrderProcessingResult> ProcessPaymentAsync(OrderNumber orderNumber, CancellationToken ct)
-    {
-        using var _ = await locks.AcquireAsync(orderNumber, ct);
-        var order = await repository.FindByOrderNumberAsync(orderNumber, ct)
-            ?? throw new OrderNotFoundException(orderNumber);
-
-        if (order.Status == OrderStatus.Paid)
-        {
-            LogAlreadyPaid(order.OrderNumber.Value);
-            return OrderProcessingResult.AlreadyPaid(OrderDtoMapper.ToDto(order.Receipt!));
-        }
-
-        var gateway = gatewayRegistry.Resolve(order.PaymentGatewayId);
-        LogChargeStarted(order.OrderNumber.Value, order.PaymentGatewayId.Value);
-        var stopwatch = Stopwatch.StartNew();
-        PaymentResult result;
-        try
-        {
-            result = await gateway.ChargeAsync(
-                new PaymentRequest(order.OrderNumber, order.PayableAmount, order.Description), ct);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            LogChargeThrew(ex, order.OrderNumber.Value, order.PaymentGatewayId.Value);
-            throw;
-        }
-
-        if (result.IsSuccess)
-        {
-            LogChargeSucceeded(order.OrderNumber.Value, order.PaymentGatewayId.Value, stopwatch.ElapsedMilliseconds);
-            var receipt = new Receipt(order.OrderNumber, order.PayableAmount, DateTimeOffset.UtcNow,
-                result.ConfirmationCode!);
-            order.MarkPaid(receipt);
-            await repository.UpdateAsync(order, ct);
-            return OrderProcessingResult.Success(OrderDtoMapper.ToDto(receipt));
-        }
-
-        LogChargeDeclined(order.OrderNumber.Value, order.PaymentGatewayId.Value, stopwatch.ElapsedMilliseconds,
-            result.FailureReason!);
-        order.MarkFailed(result.FailureReason!);
-        await repository.UpdateAsync(order, ct);
-        return OrderProcessingResult.Failure(order.OrderNumber.Value, result.FailureReason!);
     }
 }

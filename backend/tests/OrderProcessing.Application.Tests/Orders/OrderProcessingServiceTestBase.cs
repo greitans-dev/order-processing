@@ -19,8 +19,9 @@ public abstract class OrderProcessingServiceTestBase
         g => g.ChargeAsync(It.IsAny<PaymentRequest>(), It.IsAny<CancellationToken>());
 
     protected FakeOrderRepository Repository { get; } = new();
-    protected FakeLogger<OrderProcessingService> Logger { get; } = new();
+    private readonly FakeLogCollector _logCollector = new();
     protected Mock<IPaymentGateway> Gateway { get; } = new();
+    protected OrderPaymentProcessor Payments { get; }
     protected OrderProcessingService Sut { get; }
 
     protected OrderProcessingServiceTestBase()
@@ -31,7 +32,12 @@ public abstract class OrderProcessingServiceTestBase
             .Returns(Gateway.Object);
         registry.Setup(r => r.Resolve(It.Is<PaymentGatewayId>(id => id.Value != "test-gw")))
             .Throws<UnknownPaymentGatewayException>(() => new UnknownPaymentGatewayException("nope"));
-        Sut = new OrderProcessingService(Repository, registry.Object, new OrderNumberLockRegistry(), Logger);
+        var locks = new OrderNumberLockRegistry();
+        // Both classes log into one collector, so tests see the whole flow in order.
+        Payments = new OrderPaymentProcessor(Repository, registry.Object, locks,
+            new FakeLogger<OrderPaymentProcessor>(_logCollector));
+        Sut = new OrderProcessingService(Repository, registry.Object, locks, Payments,
+            new FakeLogger<OrderProcessingService>(_logCollector));
     }
 
     protected static SubmitOrderCommand Command(decimal amount = 100m, string gateway = "test-gw", string currency = "EUR",
@@ -62,7 +68,9 @@ public abstract class OrderProcessingServiceTestBase
         results.Count(r => r.Outcome == OrderProcessingOutcome.AlreadyPaid).ShouldBe(ConcurrentCalls - 1);
     }
 
-    protected IReadOnlyList<FakeLogRecord> Logs => Logger.Collector.GetSnapshot();
+    protected IReadOnlyList<FakeLogRecord> Logs => _logCollector.GetSnapshot();
+
+    protected void ClearLogs() => _logCollector.Clear();
 
     protected Order SeedOrder(string userId, DateTimeOffset createdAtUtc)
     {

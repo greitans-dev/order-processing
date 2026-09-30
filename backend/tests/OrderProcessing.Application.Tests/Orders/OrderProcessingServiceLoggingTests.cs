@@ -42,7 +42,7 @@ public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
     {
         GatewaySucceeds();
         var first = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
-        Logger.Collector.Clear();
+        ClearLogs();
 
         await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
 
@@ -57,7 +57,7 @@ public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
     {
         GatewaySucceeds();
         var first = await Sut.SubmitNewOrderAsync(Command(), default);
-        Logger.Collector.Clear();
+        ClearLogs();
 
         await Sut.ResubmitOrderAsync(new OrderNumber(first.OrderNumber), default);
 
@@ -71,7 +71,7 @@ public class OrderProcessingServiceLoggingTests : OrderProcessingServiceTestBase
     {
         GatewaySucceeds();
         var first = await Sut.SubmitNewOrderAsync(Command(key: SharedKey), default);
-        Logger.Collector.Clear();
+        ClearLogs();
 
         await Should.ThrowAsync<IdempotencyKeyReuseException>(() =>
             Sut.SubmitNewOrderAsync(Command(101m, key: SharedKey), default));
