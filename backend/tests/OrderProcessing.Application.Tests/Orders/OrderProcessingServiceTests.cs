@@ -39,21 +39,6 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
     }
 
     [Fact]
-    public async Task SubmitNewOrder_ValidCommand_PassesAmountAndDescriptionToGateway()
-    {
-        PaymentRequest? captured = null;
-        SetupCharge()
-            .Callback<PaymentRequest, CancellationToken>((r, _) => captured = r)
-            .ReturnsAsync(PaymentResult.Success("C"));
-
-        await Sut.SubmitNewOrderAsync(Command(12.34m), default);
-
-        captured.ShouldNotBeNull();
-        captured.Amount.Amount.ShouldBe(12.34m);
-        captured.Description.ShouldBe("desc");
-    }
-
-    [Fact]
     public async Task SubmitNewOrder_UnknownGateway_ThrowsAndPersistsNothing()
     {
         await Should.ThrowAsync<UnknownPaymentGatewayException>(
@@ -79,51 +64,6 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
 
         result.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
         result.OrderNumber.ShouldBe(failed.OrderNumber.Value);
-        Repository.All.Single().Status.ShouldBe(OrderStatus.Paid);
-    }
-
-    [Fact]
-    public async Task ResubmitOrder_FailedOrderAndGatewayDeclines_StaysFailed()
-    {
-        var failed = await SeedFailedOrder();
-
-        var result = await Sut.ResubmitOrderAsync(failed.OrderNumber, default);
-
-        result.Outcome.ShouldBe(OrderProcessingOutcome.Failed);
-        Repository.All.Single().Status.ShouldBe(OrderStatus.Failed);
-    }
-
-    [Fact]
-    public async Task ResubmitOrder_UnknownOrder_ThrowsNotFound() =>
-        await Should.ThrowAsync<OrderNotFoundException>(
-            () => Sut.ResubmitOrderAsync(new OrderNumber("ORD-MISSING"), default));
-
-    [Fact]
-    public async Task ResubmitOrder_PaidOrder_ReturnsExistingReceiptWithoutCharging()
-    {
-        GatewaySucceeds();
-        var first = await Sut.SubmitNewOrderAsync(Command(), default);
-        Gateway.Invocations.Clear();
-
-        var again = await Sut.ResubmitOrderAsync(new OrderNumber(first.OrderNumber), default);
-
-        again.Outcome.ShouldBe(OrderProcessingOutcome.AlreadyPaid);
-        again.Receipt.ShouldBe(first.Receipt);
-        VerifyChargeCalls(Times.Never);
-    }
-
-    [Fact]
-    public async Task ResubmitOrder_Concurrent_ChargesGatewayOnce()
-    {
-        var failed = await SeedFailedOrder();
-        Gateway.Invocations.Clear();
-        GatewaySucceedsSlowly();
-
-        var results = await RunConcurrently(() => Sut.ResubmitOrderAsync(failed.OrderNumber, default));
-
-        VerifyChargeCalls(Times.Once);
-        ShouldHaveOnePaidAndRestAlreadyPaid(results);
-        results.Select(r => r.Receipt!.PaymentConfirmation).Distinct().ShouldBe(["CONF-X"]);
         Repository.All.Single().Status.ShouldBe(OrderStatus.Paid);
     }
 
@@ -255,5 +195,4 @@ public class OrderProcessingServiceTests : OrderProcessingServiceTestBase
         summary.CurrencyCode.ShouldBe("EUR");
         summary.Status.ShouldBe("Paid");
     }
-
 }

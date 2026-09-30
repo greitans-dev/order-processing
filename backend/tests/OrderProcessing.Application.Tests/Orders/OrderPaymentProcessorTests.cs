@@ -1,6 +1,8 @@
+using Moq;
 using OrderProcessing.Application.Abstractions;
 using OrderProcessing.Application.Orders;
 using OrderProcessing.Domain.Orders;
+using OrderProcessing.Domain.Payments;
 using Shouldly;
 
 namespace OrderProcessing.Application.Tests.Orders;
@@ -19,7 +21,7 @@ public class OrderPaymentProcessorTests : OrderProcessingServiceTestBase
 
         result.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
         order.Status.ShouldBe(OrderStatus.Paid);
-        VerifyChargeCalls(Moq.Times.Once);
+        VerifyChargeCalls(Times.Once);
     }
 
     [Fact]
@@ -35,6 +37,22 @@ public class OrderPaymentProcessorTests : OrderProcessingServiceTestBase
     }
 
     [Fact]
+    public async Task Process_PendingOrder_PassesAmountAndDescriptionToGateway()
+    {
+        PaymentRequest? captured = null;
+        SetupCharge()
+            .Callback<PaymentRequest, CancellationToken>((r, _) => captured = r)
+            .ReturnsAsync(PaymentResult.Success("C"));
+        var order = SeedOrder("user-1", CreatedAt, 12.34m, "desc");
+
+        await Payments.ProcessAsync(order.OrderNumber, default);
+
+        captured.ShouldNotBeNull();
+        captured.Amount.Amount.ShouldBe(12.34m);
+        captured.Description.ShouldBe("desc");
+    }
+
+    [Fact]
     public async Task Process_UnknownOrder_ThrowsNotFound() =>
         await Should.ThrowAsync<OrderNotFoundException>(() =>
             Payments.ProcessAsync(new OrderNumber("missing"), default));
@@ -44,12 +62,13 @@ public class OrderPaymentProcessorTests : OrderProcessingServiceTestBase
     {
         GatewaySucceeds();
         var order = SeedOrder("user-1", CreatedAt);
-        await Payments.ProcessAsync(order.OrderNumber, default);
+        var first = await Payments.ProcessAsync(order.OrderNumber, default);
 
         var result = await Payments.ProcessAsync(order.OrderNumber, default);
 
         result.Outcome.ShouldBe(OrderProcessingOutcome.AlreadyPaid);
-        VerifyChargeCalls(Moq.Times.Once);
+        result.Receipt.ShouldBe(first.Receipt);
+        VerifyChargeCalls(Times.Once);
     }
 
     [Fact]
@@ -61,6 +80,8 @@ public class OrderPaymentProcessorTests : OrderProcessingServiceTestBase
         var results = await RunConcurrently(() => Payments.ProcessAsync(order.OrderNumber, default));
 
         ShouldHaveOnePaidAndRestAlreadyPaid(results);
-        VerifyChargeCalls(Moq.Times.Once);
+        VerifyChargeCalls(Times.Once);
+        results.Select(r => r.Receipt!.PaymentConfirmation).Distinct().ShouldBe(["CONF-X"]);
+        order.Status.ShouldBe(OrderStatus.Paid);
     }
 }

@@ -72,10 +72,10 @@ public abstract class OrderProcessingServiceTestBase
 
     protected void ClearLogs() => _logCollector.Clear();
 
-    protected Order SeedOrder(string userId, DateTimeOffset createdAtUtc)
+    protected Order SeedOrder(string userId, DateTimeOffset createdAtUtc, decimal amount = 10m, string? description = null)
     {
         var order = Order.Create(userId, new IdempotencyKey(Guid.NewGuid().ToString()), createdAtUtc,
-            Money.Of(10m, "EUR"), new PaymentGatewayId("test-gw"), null);
+            Money.Of(amount, "EUR"), new PaymentGatewayId("test-gw"), description);
         Repository.AddAsync(order, default).GetAwaiter().GetResult();
         return order;
     }
