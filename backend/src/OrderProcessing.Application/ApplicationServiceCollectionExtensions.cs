@@ -9,5 +9,6 @@ public static class ApplicationServiceCollectionExtensions
         services
             .AddSingleton<OrderNumberLockRegistry>() // must be one instance per process
             .AddScoped<OrderPaymentProcessor>()
-            .AddScoped<OrderProcessingService>();
+            .AddScoped<OrderProcessingService>()
+            .AddScoped<GetUserOrdersUseCase>();
 }

@@ -51,13 +51,4 @@ public sealed partial class OrderProcessingService(
         LogResubmitRequested(orderNumber.Value);
         return payments.ProcessAsync(orderNumber, ct);
     }
-
-    public async Task<IReadOnlyList<OrderSummaryDto>> GetOrdersForUserAsync(string userId, CancellationToken ct)
-    {
-        var orders = await repository.FindByUserIdAsync(userId, ct);
-        return orders
-            .OrderByDescending(o => o.CreatedAtUtc)
-            .ThenBy(o => o.OrderNumber.Value).Select(OrderDtoMapper.ToSummary)
-            .ToList();
-    }
 }

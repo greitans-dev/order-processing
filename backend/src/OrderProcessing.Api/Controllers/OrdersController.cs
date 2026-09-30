@@ -14,7 +14,8 @@ namespace OrderProcessing.Api.Controllers;
 [ApiVersion("1.0")]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
 [Route("api/v{version:apiVersion}/orders")]
-public sealed class OrdersController(OrderProcessingService service) : ControllerBase
+public sealed class OrdersController(OrderProcessingService service, GetUserOrdersUseCase getUserOrders)
+    : ControllerBase
 {
     /// <summary>Submits a new order and attempts payment.</summary>
     /// <remarks>
@@ -115,7 +116,7 @@ public sealed class OrdersController(OrderProcessingService service) : Controlle
     public async Task<ActionResult<IReadOnlyList<OrderSummaryResponse>>> List(
         [FromQuery, Required] string userId, CancellationToken ct)
     {
-        var orders = await service.GetOrdersForUserAsync(userId, ct);
+        var orders = await getUserOrders.ExecuteAsync(userId, ct);
         return Ok(orders.Select(o => o.ToResponse()).ToList());
     }
 

@@ -23,6 +23,7 @@ public abstract class OrderProcessingServiceTestBase
     protected Mock<IPaymentGateway> Gateway { get; } = new();
     protected OrderPaymentProcessor Payments { get; }
     protected OrderProcessingService Sut { get; }
+    protected GetUserOrdersUseCase GetUserOrders { get; }
 
     protected OrderProcessingServiceTestBase()
     {
@@ -38,6 +39,7 @@ public abstract class OrderProcessingServiceTestBase
             new FakeLogger<OrderPaymentProcessor>(_logCollector));
         Sut = new OrderProcessingService(Repository, registry.Object, locks, Payments,
             new FakeLogger<OrderProcessingService>(_logCollector));
+        GetUserOrders = new GetUserOrdersUseCase(Repository);
     }
 
     protected static SubmitOrderCommand Command(decimal amount = 100m, string gateway = "test-gw", string currency = "EUR",
