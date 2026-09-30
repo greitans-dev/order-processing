@@ -47,6 +47,8 @@ public class OrdersControllerTests(WebApplicationFactory<Program> factory) : Api
     [Theory]
     [InlineData(0, "mock-alpha", "EUR")]
     [InlineData(-5, "mock-alpha", "EUR")]
+    [InlineData(49.999, "mock-alpha", "EUR")]
+    [InlineData(0.011, "mock-alpha", "EUR")]
     [InlineData(10, "ghost", "EUR")]
     [InlineData(10, "mock-alpha", "USD")]
     [InlineData(10, "", "EUR")]

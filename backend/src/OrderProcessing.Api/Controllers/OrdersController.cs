@@ -43,7 +43,7 @@ public sealed class OrdersController(
     /// </param>
     /// <param name="ct">Cancellation token.</param>
     /// <response code="200">The order was paid, or it had already been paid: the receipt.</response>
-    /// <response code="400">The request is invalid: a missing or invalid <c>Idempotency-Key</c>, missing fields, an amount of zero or less, a description over 500 characters, an unknown gateway or an unsupported currency.</response>
+    /// <response code="400">The request is invalid: a missing or invalid <c>Idempotency-Key</c>, missing fields, an amount of zero or less or with more than two decimal places, a description over 500 characters, an unknown gateway or an unsupported currency.</response>
     /// <response code="409">The <c>Idempotency-Key</c> was already used with a different payload.</response>
     /// <response code="422">The gateway declined the payment. The body contains the <c>orderNumber</c>, which can be resubmitted.</response>
     [HttpPost]

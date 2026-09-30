@@ -11,9 +11,14 @@ public sealed record Money
         CurrencyCode = currencyCode;
     }
 
+    public const int MaxDecimalPlaces = 2;
+
     public static Money Of(decimal amount, string currencyCode)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(amount);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount);
+        if (decimal.Round(amount, MaxDecimalPlaces) != amount)
+            throw new ArgumentOutOfRangeException(nameof(amount), amount,
+                $"Amount must have at most {MaxDecimalPlaces} decimal places.");
         var code = (currencyCode ?? string.Empty).Trim().ToUpperInvariant();
         if (!SupportedCurrencies.IsSupported(code))
             throw new UnsupportedCurrencyException(currencyCode ?? string.Empty);
