@@ -13,23 +13,23 @@ public class PaymentGatewayRegistryTests
         new([new MockGatewayAlpha(), new MockGatewayBeta()]);
 
     [Fact]
-    public void Resolve_returns_gateway_by_id() =>
+    public void Resolve_KnownId_ReturnsMatchingGateway() =>
         Registry().Resolve(new PaymentGatewayId("mock-beta")).ShouldBeOfType<MockGatewayBeta>();
 
     [Fact]
-    public void Resolve_unknown_throws() =>
+    public void Resolve_UnknownId_Throws() =>
         Should.Throw<UnknownPaymentGatewayException>(() => Registry().Resolve(new PaymentGatewayId("ghost")));
 
     [Fact]
-    public void ListAvailable_returns_both_mocks() =>
+    public void ListAvailable_DefaultMocks_ReturnsBothGateways() =>
         Registry().ListAvailable().Select(g => g.Id).ShouldBe(["mock-alpha", "mock-beta"], ignoreOrder: true);
 
     [Fact]
-    public void Duplicate_gateway_ids_are_rejected() =>
+    public void Constructor_DuplicateGatewayIds_Throws() =>
         Should.Throw<InvalidOperationException>(() => new PaymentGatewayRegistry([new MockGatewayAlpha(), new MockGatewayAlpha()]));
 
     [Fact]
-    public void AddInfrastructure_wires_registry_and_repository()
+    public void AddInfrastructure_Default_WiresRegistryAndSingletonRepository()
     {
         using var provider = new ServiceCollection().AddInfrastructure().BuildServiceProvider();
         provider.GetRequiredService<IPaymentGatewayRegistry>().ListAvailable().Count.ShouldBe(2);

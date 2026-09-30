@@ -18,7 +18,7 @@ public class MockGatewayTests
         new(OrderNumber.New(), Money.Of(amount, "EUR"), null);
 
     [Theory, MemberData(nameof(Gateways))]
-    public async Task Charges_just_below_limit_succeed(IPaymentGateway gateway, string prefix)
+    public async Task ChargeAsync_AmountJustBelowLimit_Succeeds(IPaymentGateway gateway, string prefix)
     {
         var result = await gateway.ChargeAsync(Request(9999.99m), default);
         result.IsSuccess.ShouldBeTrue();
@@ -26,7 +26,7 @@ public class MockGatewayTests
     }
 
     [Theory, MemberData(nameof(Gateways))]
-    public async Task Charges_at_limit_are_declined_with_readable_reason(IPaymentGateway gateway, string _)
+    public async Task ChargeAsync_AmountAtLimit_DeclinesWithReadableReason(IPaymentGateway gateway, string _)
     {
         var result = await gateway.ChargeAsync(Request(10000.00m), default);
         result.IsSuccess.ShouldBeFalse();
@@ -35,7 +35,7 @@ public class MockGatewayTests
     }
 
     [Fact]
-    public void Gateways_have_expected_ids()
+    public void GatewayId_EachMock_ReturnsExpectedId()
     {
         new MockGatewayAlpha().GatewayId.ShouldBe("mock-alpha");
         new MockGatewayBeta().GatewayId.ShouldBe("mock-beta");

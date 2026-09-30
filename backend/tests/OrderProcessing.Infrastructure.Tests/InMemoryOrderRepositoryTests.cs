@@ -12,7 +12,7 @@ public class InMemoryOrderRepositoryTests
             new PaymentGatewayId("mock-alpha"), null);
 
     [Fact]
-    public async Task Add_then_find_roundtrips()
+    public async Task AddAsync_NewOrder_CanBeFoundByOrderNumber()
     {
         var repo = new InMemoryOrderRepository();
         var order = NewOrder();
@@ -22,11 +22,11 @@ public class InMemoryOrderRepositoryTests
     }
 
     [Fact]
-    public async Task Find_unknown_returns_null() =>
+    public async Task FindByOrderNumberAsync_UnknownOrder_ReturnsNull() =>
         (await new InMemoryOrderRepository().FindByOrderNumberAsync(new OrderNumber("ORD-X"), default)).ShouldBeNull();
 
     [Fact]
-    public async Task Update_persists_state_change()
+    public async Task UpdateAsync_ChangedOrder_PersistsStateChange()
     {
         var repo = new InMemoryOrderRepository();
         var order = NewOrder();
@@ -38,12 +38,12 @@ public class InMemoryOrderRepositoryTests
     }
 
     [Fact]
-    public async Task Update_of_unknown_order_throws() =>
+    public async Task UpdateAsync_UnknownOrder_Throws() =>
         await Should.ThrowAsync<InvalidOperationException>(
             () => new InMemoryOrderRepository().UpdateAsync(NewOrder(), default));
 
     [Fact]
-    public async Task FindByUserId_filters_by_user()
+    public async Task FindByUserIdAsync_MultipleUsers_ReturnsOnlyThatUsersOrders()
     {
         var repo = new InMemoryOrderRepository();
         await repo.AddAsync(NewOrder("a"), default);
@@ -55,7 +55,7 @@ public class InMemoryOrderRepositoryTests
     }
 
     [Fact]
-    public async Task FindByIdempotencyKey_returns_the_order_for_that_user_and_key()
+    public async Task FindByIdempotencyKeyAsync_MatchingUserAndKey_ReturnsOrder()
     {
         var repo = new InMemoryOrderRepository();
         var order = NewOrder("a", "k1");
@@ -67,7 +67,7 @@ public class InMemoryOrderRepositoryTests
     }
 
     [Fact]
-    public async Task Add_with_duplicate_idempotency_key_for_same_user_throws()
+    public async Task AddAsync_DuplicateKeyForSameUser_Throws()
     {
         var repo = new InMemoryOrderRepository();
         await repo.AddAsync(NewOrder("a", "k1"), default);
