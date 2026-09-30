@@ -1,4 +1,4 @@
-using OrderProcessing.Application.Orders.Queries;
+using OrderProcessing.Application.Orders.Listing;
 using Shouldly;
 
 namespace OrderProcessing.Application.Tests.Orders.Listing;

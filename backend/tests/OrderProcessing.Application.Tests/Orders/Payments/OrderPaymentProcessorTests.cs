@@ -1,6 +1,6 @@
 using Moq;
 using OrderProcessing.Application.Abstractions;
-using OrderProcessing.Application.Orders.Results;
+using OrderProcessing.Application.Orders.Payments;
 using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
 using Shouldly;

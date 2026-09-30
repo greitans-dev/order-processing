@@ -1,7 +1,7 @@
 using Moq;
 using OrderProcessing.Application.Abstractions;
-using OrderProcessing.Application.Orders.Commands;
-using OrderProcessing.Application.Orders.Results;
+using OrderProcessing.Application.Orders.Payments;
+using OrderProcessing.Application.Orders.Resubmit;
 using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
 using Shouldly;

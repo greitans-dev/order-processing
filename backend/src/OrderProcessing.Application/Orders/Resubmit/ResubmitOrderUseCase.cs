@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OrderProcessing.Application.Orders.Commands;
 using OrderProcessing.Application.Orders.Payments;
-using OrderProcessing.Application.Orders.Results;
 
 namespace OrderProcessing.Application.Orders.Resubmit;
 

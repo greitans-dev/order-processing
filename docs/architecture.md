@@ -21,15 +21,13 @@ implementations only in `Infrastructure.Persistence`.
 - **Application**: one class per use case, `OrderPaymentProcessor` (the locked charge step they share), the `IOrderRepository`, `IPaymentGateway` and
   `IPaymentGatewayRegistry` abstractions, and use-case DTOs. These DTOs stay separate from the API's wire contracts.
 
-  `Application/Orders` is grouped by role, and each folder has a matching namespace (`OrderProcessing.Application.Orders.<Folder>`):
+  `Application/Orders` is grouped by use case, and each folder has a matching namespace (`OrderProcessing.Application.Orders.<Folder>`):
 
   | Folder | Contents |
   |---|---|
-  | `Submit/`, `Resubmit/`, `Listing/` | The use cases (`SubmitOrderUseCase`, `ResubmitOrderUseCase`, `GetUserOrdersUseCase`, each with `ExecuteAsync`) and their `*.Logging.cs` partials |
-  | `Payments/` | `OrderPaymentProcessor`, the charge step shared by submit and resubmit |
+  | `Submit/`, `Resubmit/`, `Listing/` | One use case each (`SubmitOrderUseCase`, `ResubmitOrderUseCase`, `GetUserOrdersUseCase`, each with `ExecuteAsync`), its `*.Logging.cs` partial, and its input type (`SubmitOrderCommand`, `ResubmitOrderCommand`, `GetUserOrdersQuery`). `Listing/` also holds `OrderSummaryDto` |
+  | `Payments/` | `OrderPaymentProcessor`, the charge step shared by submit and resubmit, and the result types it produces (`OrderProcessingResult`, `OrderProcessingOutcome`, `OrderProcessingError`, `OrderReceiptDto`) |
   | `Locking/` | `OrderNumberLockRegistry` |
-  | `Commands/`, `Queries/` | Use-case inputs: `SubmitOrderCommand`, `ResubmitOrderCommand`, `GetUserOrdersQuery` |
-  | `Results/` | Use-case outputs (`OrderProcessingResult`, `OrderReceiptDto`, `OrderSummaryDto`, ...) |
 
   `OrderDtoMapper` stays in `Orders/` because several folders use it. Tests mirror this layout.
 - **Infrastructure**: in-memory repository, the mock gateways, and the gateway registry.

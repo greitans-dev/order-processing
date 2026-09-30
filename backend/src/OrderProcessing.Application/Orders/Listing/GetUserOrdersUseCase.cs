@@ -1,6 +1,4 @@
 using OrderProcessing.Application.Abstractions;
-using OrderProcessing.Application.Orders.Queries;
-using OrderProcessing.Application.Orders.Results;
 
 namespace OrderProcessing.Application.Orders.Listing;
 

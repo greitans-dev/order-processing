@@ -1,3 +1,3 @@
-namespace OrderProcessing.Application.Orders.Queries;
+namespace OrderProcessing.Application.Orders.Listing;
 
 public sealed record GetUserOrdersQuery(string UserId);
