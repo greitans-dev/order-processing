@@ -3,7 +3,7 @@ using OrderProcessing.Domain.Payments;
 using OrderProcessing.Infrastructure.Persistence;
 using Shouldly;
 
-namespace OrderProcessing.Infrastructure.Tests;
+namespace OrderProcessing.Infrastructure.Tests.Persistence;
 
 public class InMemoryOrderRepositoryTests
 {

@@ -4,7 +4,7 @@ using OrderProcessing.Domain.Payments;
 using OrderProcessing.Infrastructure.Payments;
 using Shouldly;
 
-namespace OrderProcessing.Infrastructure.Tests;
+namespace OrderProcessing.Infrastructure.Tests.Payments;
 
 public class MockGatewayTests
 {

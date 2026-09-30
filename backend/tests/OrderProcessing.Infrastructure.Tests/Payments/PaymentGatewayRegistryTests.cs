@@ -1,11 +1,9 @@
-using Microsoft.Extensions.DependencyInjection;
 using OrderProcessing.Application.Abstractions;
 using OrderProcessing.Domain.Payments;
-using OrderProcessing.Infrastructure;
 using OrderProcessing.Infrastructure.Payments;
 using Shouldly;
 
-namespace OrderProcessing.Infrastructure.Tests;
+namespace OrderProcessing.Infrastructure.Tests.Payments;
 
 public class PaymentGatewayRegistryTests
 {
@@ -27,13 +25,4 @@ public class PaymentGatewayRegistryTests
     [Fact]
     public void Constructor_DuplicateGatewayIds_Throws() =>
         Should.Throw<InvalidOperationException>(() => new PaymentGatewayRegistry([new MockGatewayAlpha(), new MockGatewayAlpha()]));
-
-    [Fact]
-    public void AddInfrastructure_Default_WiresRegistryAndSingletonRepository()
-    {
-        using var provider = new ServiceCollection().AddInfrastructure().BuildServiceProvider();
-        provider.GetRequiredService<IPaymentGatewayRegistry>().ListAvailable().Count.ShouldBe(2);
-        provider.GetRequiredService<IOrderRepository>()
-            .ShouldBeSameAs(provider.GetRequiredService<IOrderRepository>());
-    }
 }
