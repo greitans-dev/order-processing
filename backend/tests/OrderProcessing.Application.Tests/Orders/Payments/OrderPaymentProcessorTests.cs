@@ -141,30 +141,4 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
         results.Select(r => ReceiptOf(r).PaymentConfirmation).Distinct().ShouldBe(["CONF-X"]);
         order.Status.ShouldBe(OrderStatus.Paid);
     }
-
-    [Fact]
-    public async Task Process_FailedOrderAndGatewaySucceeds_PaysAndReusesOrderNumber()
-    {
-        var failed = await SeedFailedOrder();
-        GatewaySucceeds();
-
-        var result = await Payments.ProcessAsync(failed.OrderNumber, default);
-
-        result.ShouldBeOfType<OrderProcessingResult.Paid>();
-        result.OrderNumber.ShouldBe(failed.OrderNumber.Value);
-        Repository.All.Single().Status.ShouldBe(OrderStatus.Paid);
-    }
-
-    [Fact]
-    public async Task Process_PaidOrder_LogsAlreadyPaidWithoutCallingGateway()
-    {
-        GatewaySucceeds();
-        var first = await SubmitOrder.ExecuteAsync(Command(), default);
-        ClearLogs();
-
-        await Payments.ProcessAsync(new OrderNumber(first.OrderNumber), default);
-
-        Logs.ShouldContain(l => l.Message.Contains("already paid") && l.Message.Contains(first.OrderNumber));
-        Logs.ShouldNotContain(l => l.Message.Contains("Charging"));
-    }
 }

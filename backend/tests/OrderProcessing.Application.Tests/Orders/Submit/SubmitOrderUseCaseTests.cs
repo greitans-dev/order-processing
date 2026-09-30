@@ -100,7 +100,7 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
         GatewayDeclines();
         var failed = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
         GatewaySucceeds();
-        await Payments.ProcessAsync(new OrderNumber(failed.OrderNumber), default);
+        await Resubmit.ExecuteAsync(new OrderNumber(failed.OrderNumber), default);
 
         var replay = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
 
