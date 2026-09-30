@@ -9,7 +9,7 @@ Infrastructure  -> Application, Domain
 Api             -> Application, Infrastructure, Domain   (Infrastructure only for the composition root)
 ```
 
-The `OrderProcessing.ArchitectureTests` project (NetArchTest) enforces this: the Domain has no framework or outward
+The `OrderProcessing.ArchitectureTests` project enforces this: the Domain has no framework or outward
 dependencies, Application does not reference Infrastructure or ASP.NET MVC, controllers do not reference
 Infrastructure, `IPaymentGateway` implementations live only in `Infrastructure.Payments`, and `IOrderRepository`
 implementations only in `Infrastructure.Persistence`.
@@ -18,12 +18,9 @@ implementations only in `Infrastructure.Persistence`.
 
 - **Domain**: `Order` aggregate (`Pending` / `Paid` / `Failed`), `OrderNumber`, `Receipt`, `Money` (amount plus
   currency code), `PaymentGatewayId`, and the static `SupportedCurrencies` list (`EUR` only).
-- **Application**: one class per use case, `OrderPaymentProcessor` (the locked charge step they share), the `IOrderRepository`, `IPaymentGateway` and
-  `IPaymentGatewayRegistry` abstractions, and use-case DTOs. These DTOs stay separate from the API's wire contracts.
-
-  `Application/Orders` is grouped by use case (`Submit/`, `Listing/`), plus `Payments/` for
-  `OrderPaymentProcessor` and its result types, and `Locking/` for the lock registry. Each folder has a matching
-  namespace, and tests mirror the layout.
+- **Application**: one class per use case, `OrderPaymentProcessor` (the locked charge step they share), the
+  `IOrderRepository`, `IPaymentGateway` and `IPaymentGatewayRegistry` abstractions, and use-case DTOs.
+  These DTOs stay separate from the API's wire contracts.
 - **Infrastructure**: in-memory repository, the mock gateway, and the gateway registry.
 - **Api**: versioned controllers, wire contracts (`Contracts/V1`), `OrderContractMapper`, OpenAPI and Swagger UI.
 
@@ -31,7 +28,7 @@ implementations only in `Infrastructure.Persistence`.
 
 Submit and resubmit both run through `OrderPaymentProcessor.ProcessAsync`:
 
-1. Take a per-order-number lock (`OrderLockRegistry`, a singleton holding one `SemaphoreSlim` per order number).
+1. Take a per-order-number lock (`OrderLockRegistry`).
 2. Re-fetch the order under the lock.
 3. If it is already `Paid`, return the existing receipt without calling the gateway.
 4. Otherwise charge the gateway and persist `Paid` or `Failed`.
