@@ -1,5 +1,6 @@
 using Moq;
 using OrderProcessing.Application.Abstractions;
+using OrderProcessing.Application.Orders.Commands;
 using OrderProcessing.Application.Orders.Results;
 using OrderProcessing.Domain.Orders;
 using OrderProcessing.Domain.Payments;
@@ -91,7 +92,7 @@ public class SubmitOrderUseCaseTests : OrderUseCaseTestBase
         GatewayDeclines();
         var failed = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
         GatewaySucceeds();
-        await Resubmit.ExecuteAsync(new OrderNumber(failed.OrderNumber), default);
+        await Resubmit.ExecuteAsync(new ResubmitOrderCommand(new OrderNumber(failed.OrderNumber)), default);
 
         var replay = await SubmitOrder.ExecuteAsync(Command(key: SharedKey), default);
 

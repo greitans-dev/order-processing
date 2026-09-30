@@ -28,7 +28,7 @@ implementations only in `Infrastructure.Persistence`.
   | `Submit/`, `Resubmit/`, `Listing/` | The use cases (`SubmitOrderUseCase`, `ResubmitOrderUseCase`, `GetUserOrdersUseCase`, each with `ExecuteAsync`) and their `*.Logging.cs` partials |
   | `Payments/` | `OrderPaymentProcessor`, the charge step shared by submit and resubmit |
   | `Locking/` | `OrderNumberLockRegistry` |
-  | `Commands/` | Use-case inputs (`SubmitOrderCommand`) |
+  | `Commands/`, `Queries/` | Use-case inputs: `SubmitOrderCommand`, `ResubmitOrderCommand`, `GetUserOrdersQuery` |
   | `Results/` | Use-case outputs (`OrderProcessingResult`, `OrderReceiptDto`, `OrderSummaryDto`, ...) |
 
   `OrderDtoMapper` stays in `Orders/` because several folders use it. Tests mirror this layout.

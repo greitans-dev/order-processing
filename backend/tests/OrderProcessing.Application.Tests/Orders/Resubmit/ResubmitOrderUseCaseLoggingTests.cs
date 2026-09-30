@@ -1,3 +1,4 @@
+using OrderProcessing.Application.Orders.Commands;
 using OrderProcessing.Domain.Orders;
 using Shouldly;
 
@@ -12,7 +13,7 @@ public class ResubmitOrderUseCaseLoggingTests : OrderUseCaseTestBase
         var first = await SubmitOrder.ExecuteAsync(Command(), default);
         ClearLogs();
 
-        await Resubmit.ExecuteAsync(new OrderNumber(first.OrderNumber), default);
+        await Resubmit.ExecuteAsync(new ResubmitOrderCommand(new OrderNumber(first.OrderNumber)), default);
 
         Logs.ShouldContain(l => l.Message.Contains("Resubmit requested") && l.Message.Contains(first.OrderNumber));
         Logs.ShouldContain(l => l.Message.Contains("already paid") && l.Message.Contains(first.OrderNumber));

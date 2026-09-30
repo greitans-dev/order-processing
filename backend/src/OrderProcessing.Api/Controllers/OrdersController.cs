@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using OrderProcessing.Api.Contracts.V1;
 using OrderProcessing.Api.Mapping;
 using OrderProcessing.Application.Abstractions;
+using OrderProcessing.Application.Orders.Commands;
 using OrderProcessing.Application.Orders.Listing;
+using OrderProcessing.Application.Orders.Queries;
 using OrderProcessing.Application.Orders.Resubmit;
 using OrderProcessing.Application.Orders.Results;
 using OrderProcessing.Application.Orders.Submit;
@@ -102,7 +104,7 @@ public sealed class OrdersController(
     {
         try
         {
-            return ToActionResult(await resubmitOrder.ExecuteAsync(new OrderNumber(orderNumber), ct));
+            return ToActionResult(await resubmitOrder.ExecuteAsync(new ResubmitOrderCommand(new OrderNumber(orderNumber)), ct));
         }
         catch (OrderNotFoundException)
         {
@@ -121,7 +123,7 @@ public sealed class OrdersController(
     public async Task<ActionResult<IReadOnlyList<OrderSummaryResponse>>> List(
         [FromQuery, Required] string userId, CancellationToken ct)
     {
-        var orders = await getUserOrders.ExecuteAsync(userId, ct);
+        var orders = await getUserOrders.ExecuteAsync(new GetUserOrdersQuery(userId), ct);
         return Ok(orders.Select(o => o.ToResponse()).ToList());
     }
 

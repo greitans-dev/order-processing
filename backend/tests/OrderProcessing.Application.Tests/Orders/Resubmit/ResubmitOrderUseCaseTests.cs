@@ -1,3 +1,4 @@
+using OrderProcessing.Application.Orders.Commands;
 using OrderProcessing.Application.Orders.Results;
 using OrderProcessing.Domain.Orders;
 using Shouldly;
@@ -12,7 +13,7 @@ public class ResubmitOrderUseCaseTests : OrderUseCaseTestBase
         var failed = await SeedFailedOrder();
         GatewaySucceeds();
 
-        var result = await Resubmit.ExecuteAsync(failed.OrderNumber, default);
+        var result = await Resubmit.ExecuteAsync(new ResubmitOrderCommand(failed.OrderNumber), default);
 
         result.Outcome.ShouldBe(OrderProcessingOutcome.Paid);
         result.OrderNumber.ShouldBe(failed.OrderNumber.Value);
