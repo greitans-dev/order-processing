@@ -16,7 +16,8 @@ Gateways are pluggable. `IPaymentGateway` (with a `GatewayId`) is implemented in
 2. Add one line to `AddInfrastructure()`: `services.AddSingleton<IPaymentGateway, MyGateway>();`
 
 No other layer changes, and the frontend picks it up from `GET /api/v1/payment-gateways`. To remove a gateway, delete
-the registration line (and the class, if it has its own).
+the registration line (and the class, if it has its own). Orders created with a removed gateway cannot be resubmitted
+(see [Scope and non-goals](architecture.md#scope-and-non-goals)).
 
 ## Currencies
 

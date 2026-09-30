@@ -47,8 +47,8 @@ The key lock is always taken before the order lock, and resubmit takes only the 
 
 ## Scope and non-goals
 
-Real authentication and durable persistence are out of scope: the app must work out of the box with mocked gateways.
-Both gaps sit behind narrow seams.
+Real authentication, durable persistence and graceful gateway decommissioning were left out of scope deliberately for
+the sake of simplicity.
 
 - **Authentication:** the frontend "signs in" with any user id, and the backend trusts the `userId` it is given, so any
   caller can act as or read the orders of any user. To add it, take the user id from a token and authorize
@@ -57,3 +57,8 @@ Both gaps sit behind narrow seams.
   Orders and idempotency keys are lost on restart and never expire, and the no-double-charge guarantee holds for one
   API instance only. To add it, implement `IOrderRepository` in `Infrastructure.Persistence` with unique constraints
   on the order number and on `(UserId, IdempotencyKey)`, and replace the lock with a distributed one.
+- **Gateway decommissioning:** a gateway can only be removed outright. There is no deprecation phase in which it stops
+  taking new orders but still serves resubmits. Once a gateway is gone, resubmitting its `Pending` or `Failed` orders
+  is not supported: resolving the gateway fails with `UnknownPaymentGatewayException` and the order stays as it is. To
+  add it, keep a retired state in the gateway registry (hidden from `GET /payment-gateways`, still resolvable for
+  existing orders), or define a migration or cancel path for orphaned orders.
