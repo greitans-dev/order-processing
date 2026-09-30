@@ -19,26 +19,31 @@ public sealed partial class OrderProcessingService(
         var amount = Money.Of(command.PayableAmount, command.CurrencyCode);
 
         using var _ = await locks.AcquireAsync(command.UserId, command.IdempotencyKey, ct);
-        var existing = await repository.FindByIdempotencyKeyAsync(command.UserId, command.IdempotencyKey, ct);
-        if (existing is not null)
+        var existingOrder = await repository.FindByIdempotencyKeyAsync(command.UserId, command.IdempotencyKey, ct);
+        if (existingOrder is not null)
         {
-            if (!existing.MatchesRequest(command.UserId, amount, gatewayId, command.Description))
+            if (!existingOrder.MatchesRequest(command.UserId, amount, gatewayId, command.Description))
             {
-                LogIdempotencyKeyConflict(command.IdempotencyKey.Value, command.UserId, existing.OrderNumber.Value);
+                LogIdempotencyKeyConflict(command.IdempotencyKey.Value, command.UserId, existingOrder.OrderNumber.Value);
                 throw new IdempotencyKeyReuseException(command.IdempotencyKey);
             }
-            LogIdempotentReplay(command.UserId, existing.OrderNumber.Value, existing.Status.ToString());
+            LogIdempotentReplay(command.UserId, existingOrder.OrderNumber.Value, existingOrder.Status.ToString());
             // Replay: a failed order is only retried through resubmit, never by repeating the key.
-            return existing.Status == OrderStatus.Failed
-                ? OrderProcessingResult.Failure(existing.OrderNumber.Value, existing.FailureReason!)
-                : await ProcessPaymentAsync(existing.OrderNumber, ct);
+            return existingOrder.Status == OrderStatus.Failed
+                ? OrderProcessingResult.Failure(existingOrder.OrderNumber.Value, existingOrder.FailureReason!)
+                : await ProcessPaymentAsync(existingOrder.OrderNumber, ct);
         }
 
-        var order = Order.Create(command.UserId, command.IdempotencyKey, DateTimeOffset.UtcNow, amount, gatewayId,
+        var newOrder = Order.Create(
+            command.UserId,
+            command.IdempotencyKey,
+            DateTimeOffset.UtcNow,
+            amount,
+            gatewayId,
             command.Description);
-        await repository.AddAsync(order, ct);
-        LogOrderCreated(order.OrderNumber.Value, order.UserId, amount.Amount, amount.CurrencyCode, gatewayId.Value);
-        return await ProcessPaymentAsync(order.OrderNumber, ct);
+        await repository.AddAsync(newOrder, ct);
+        LogOrderCreated(newOrder.OrderNumber.Value, newOrder.UserId, amount.Amount, amount.CurrencyCode, gatewayId.Value);
+        return await ProcessPaymentAsync(newOrder.OrderNumber, ct);
     }
 
     public Task<OrderProcessingResult> ResubmitOrderAsync(OrderNumber orderNumber, CancellationToken ct)
@@ -50,7 +55,10 @@ public sealed partial class OrderProcessingService(
     public async Task<IReadOnlyList<OrderSummaryDto>> GetOrdersForUserAsync(string userId, CancellationToken ct)
     {
         var orders = await repository.FindByUserIdAsync(userId, ct);
-        return orders.OrderByDescending(o => o.CreatedAtUtc).ThenBy(o => o.OrderNumber.Value).Select(ToSummary).ToList();
+        return orders
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .ThenBy(o => o.OrderNumber.Value).Select(ToSummary)
+            .ToList();
     }
 
     private async Task<OrderProcessingResult> ProcessPaymentAsync(OrderNumber orderNumber, CancellationToken ct)
