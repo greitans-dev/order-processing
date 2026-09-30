@@ -42,7 +42,7 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
         PaymentRequest? captured = null;
         SetupCharge()
             .Callback<PaymentRequest, CancellationToken>((r, _) => captured = r)
-            .ReturnsAsync(PaymentResult.Success("C"));
+            .ReturnsAsync(new PaymentResult.Approved("C"));
         var order = SeedOrder("user-1", CreatedAt, 12.34m, "desc");
 
         await Payments.ProcessAsync(order.OrderNumber, default);
@@ -62,7 +62,7 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
         SetupCharge().Returns(() =>
         {
             cts.Cancel();
-            return Task.FromResult(gatewaySucceeds ? PaymentResult.Success("C") : PaymentResult.Failure("No"));
+            return Task.FromResult(gatewaySucceeds ? new PaymentResult.Approved("C") : new PaymentResult.Declined("No"));
         });
         var order = SeedOrder("user-1", CreatedAt);
 
@@ -79,7 +79,7 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
         SetupCharge().Returns(async (PaymentRequest _, CancellationToken token) =>
         {
             await Task.Delay(Timeout.Infinite, token);
-            return PaymentResult.Success("never");
+            return new PaymentResult.Approved("never");
         });
         var order = SeedOrder("user-1", CreatedAt);
 
@@ -96,7 +96,7 @@ public class OrderPaymentProcessorTests : OrderUseCaseTestBase
         SetupCharge().Returns(async (PaymentRequest _, CancellationToken token) =>
         {
             await Task.Delay(Timeout.Infinite, token);
-            return PaymentResult.Success("never");
+            return new PaymentResult.Approved("never");
         });
         var order = SeedOrder("user-1", CreatedAt);
         using var cts = new CancellationTokenSource();

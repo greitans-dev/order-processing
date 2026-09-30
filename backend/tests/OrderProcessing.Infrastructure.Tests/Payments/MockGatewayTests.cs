@@ -10,8 +10,8 @@ public class MockGatewayTests
 {
     public static TheoryData<IPaymentGateway, string> Gateways => new()
     {
-        { new MockGatewayAlpha(), "ALPHA-" },
-        { new MockGatewayBeta(), "BETA-" },
+        { new MockGateway("mock-alpha", "Alpha", "ALPHA-"), "ALPHA-" },
+        { new MockGateway("mock-beta", "Beta", "BETA-"), "BETA-" },
     };
 
     private static PaymentRequest Request(decimal amount) =>
@@ -31,12 +31,5 @@ public class MockGatewayTests
         var reason = result.ShouldBeOfType<PaymentResult.Declined>().Reason;
         reason.ShouldNotBeNullOrWhiteSpace();
         reason.ShouldContain("limit");
-    }
-
-    [Fact]
-    public void GatewayId_EachMock_ReturnsExpectedId()
-    {
-        new MockGatewayAlpha().GatewayId.ShouldBe("mock-alpha");
-        new MockGatewayBeta().GatewayId.ShouldBe("mock-beta");
     }
 }

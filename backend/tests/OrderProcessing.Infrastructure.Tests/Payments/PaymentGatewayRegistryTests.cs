@@ -7,12 +7,16 @@ namespace OrderProcessing.Infrastructure.Tests.Payments;
 
 public class PaymentGatewayRegistryTests
 {
+    private static MockGateway Alpha() => new("mock-alpha", "Alpha", "ALPHA-");
+
+    private static MockGateway Beta() => new("mock-beta", "Beta", "BETA-");
+
     private static PaymentGatewayRegistry Registry() =>
-        new([new MockGatewayAlpha(), new MockGatewayBeta()]);
+        new([Alpha(), Beta()]);
 
     [Fact]
     public void Resolve_KnownId_ReturnsMatchingGateway() =>
-        Registry().Resolve(new PaymentGatewayId("mock-beta")).ShouldBeOfType<MockGatewayBeta>();
+        Registry().Resolve(new PaymentGatewayId("mock-beta")).GatewayId.ShouldBe("mock-beta");
 
     [Fact]
     public void Resolve_UnknownId_Throws() =>
@@ -24,5 +28,5 @@ public class PaymentGatewayRegistryTests
 
     [Fact]
     public void Constructor_DuplicateGatewayIds_Throws() =>
-        Should.Throw<InvalidOperationException>(() => new PaymentGatewayRegistry([new MockGatewayAlpha(), new MockGatewayAlpha()]));
+        Should.Throw<InvalidOperationException>(() => new PaymentGatewayRegistry([Alpha(), Alpha()]));
 }

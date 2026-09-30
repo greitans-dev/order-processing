@@ -10,8 +10,8 @@ public static class InfrastructureServiceCollectionExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
         // One line per gateway: add or remove a gateway here, nothing else changes.
-        services.AddSingleton<IPaymentGateway, MockGatewayAlpha>();
-        services.AddSingleton<IPaymentGateway, MockGatewayBeta>();
+        services.AddSingleton<IPaymentGateway>(new MockGateway("mock-alpha", "Mock Gateway Alpha", "ALPHA-"));
+        services.AddSingleton<IPaymentGateway>(new MockGateway("mock-beta", "Mock Gateway Beta", "BETA-"));
         services.AddSingleton<IPaymentGatewayRegistry, PaymentGatewayRegistry>();
 
         services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();

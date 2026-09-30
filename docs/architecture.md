@@ -30,7 +30,7 @@ implementations only in `Infrastructure.Persistence`.
   | `Locking/` | `OrderNumberLockRegistry` |
 
   `OrderDtoMapper` stays in `Orders/` because several folders use it. Tests mirror this layout.
-- **Infrastructure**: in-memory repository, the mock gateways, and the gateway registry.
+- **Infrastructure**: in-memory repository, the mock gateway, and the gateway registry.
 - **Api**: versioned controllers, wire contracts (`Contracts/V1`), `OrderContractMapper`, OpenAPI and Swagger UI.
 
 ## Idempotency and concurrency
@@ -61,18 +61,11 @@ cannot deadlock.
 
 ## Logging
 
-The use cases and `OrderPaymentProcessor` log through `ILogger` with source-generated `[LoggerMessage]`
-methods (event ids 1000+; 1000-1002 in `SubmitOrderUseCase`, 1003 in `ResubmitOrderUseCase`, 1004 and 1010-1013 in the
-processor). Every line carries the order number and, where relevant, the user
-and gateway. Because all charges go through the processor, gateway calls are logged in one place (duration and outcome)
-and any `IPaymentGateway` is covered without extra code.
-
-| Level | Events |
-|---|---|
-| Information | order created, idempotent replay, resubmit requested, order already paid, charge succeeded |
-| Warning | idempotency key reused with a different payload, charge declined (with the reason), a gateway did not answer within `Payments:GatewayTimeout` (the order stays `Pending`, HTTP 504) |
-| Error | a gateway threw; the order stays `Pending` and the exception is rethrown |
-| Debug | charge started |
+The use cases and `OrderPaymentProcessor` log through `ILogger` with source-generated `[LoggerMessage]` methods, kept
+in a `*.Logging.cs` partial next to each class (unique event ids from 1000). Every line carries the order number and,
+where relevant, the user and gateway. Because all charges go through the processor, gateway calls are logged in one
+place (duration and outcome) and any `IPaymentGateway` is covered without extra code. Declines and gateway timeouts are
+warnings; a gateway that throws is an error and leaves the order `Pending`.
 
 The description and other free text are never logged. Expected failures (`IdempotencyKeyReuseException`,
 `OrderNotFoundException`, `UnknownPaymentGatewayException`, `UnsupportedCurrencyException`,
@@ -115,6 +108,5 @@ gaps are isolated behind narrow seams, so they can be closed without reworking t
 ## Known limitations
 
 - The lock is process-local. It does not prevent a double charge if the API is scaled to several instances.
-- The lock dictionary grows with each distinct order number and idempotency key for the life of the process.
 - Idempotency keys never expire. They live as long as the order does, that is until restart.
 - The limitations that come from the missing authentication and persistence are described above.

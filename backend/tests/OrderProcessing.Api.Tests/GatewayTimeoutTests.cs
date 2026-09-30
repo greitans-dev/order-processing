@@ -21,7 +21,7 @@ public class GatewayTimeoutTests(WebApplicationFactory<Program> factory) : IClas
         public async Task<PaymentResult> ChargeAsync(PaymentRequest request, CancellationToken ct)
         {
             await Task.Delay(Timeout.Infinite, ct);
-            return PaymentResult.Success("never");
+            return new PaymentResult.Approved("never");
         }
     }
 

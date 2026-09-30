@@ -58,15 +58,15 @@ public abstract class OrderUseCaseTestBase
 
     protected void VerifyChargeCalls(Func<Times> times) => Gateway.Verify(ChargeCall, times);
 
-    protected void GatewaySucceeds() => SetupCharge().ReturnsAsync(PaymentResult.Success("CONF-1"));
+    protected void GatewaySucceeds() => SetupCharge().ReturnsAsync(new PaymentResult.Approved("CONF-1"));
 
-    protected void GatewayDeclines() => SetupCharge().ReturnsAsync(PaymentResult.Failure("Declined: limit"));
+    protected void GatewayDeclines() => SetupCharge().ReturnsAsync(new PaymentResult.Declined("Declined: limit"));
 
     protected void GatewaySucceedsSlowly() =>
         SetupCharge().Returns(async () =>
         {
             await Task.Delay(100);
-            return PaymentResult.Success("CONF-X");
+            return new PaymentResult.Approved("CONF-X");
         });
 
     protected static Task<T[]> RunConcurrently<T>(Func<Task<T>> action) =>

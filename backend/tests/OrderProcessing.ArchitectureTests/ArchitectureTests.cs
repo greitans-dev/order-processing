@@ -64,7 +64,7 @@ public class ArchitectureTests
     {
         // Guards against vacuous passes if a namespace is renamed.
         Types.InAssembly(Api).That().ResideInNamespace($"{ApiNs}.Controllers").GetTypes().ShouldNotBeEmpty();
-        Types.InAssembly(Infrastructure).That().ImplementInterface(typeof(IPaymentGateway)).GetTypes().Count().ShouldBe(2);
+        Types.InAssembly(Infrastructure).That().ImplementInterface(typeof(IPaymentGateway)).GetTypes().ShouldNotBeEmpty();
         Types.InAssembly(Infrastructure).That().ImplementInterface(typeof(IOrderRepository)).GetTypes().ShouldNotBeEmpty();
     }
 }

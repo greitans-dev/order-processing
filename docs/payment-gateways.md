@@ -6,16 +6,17 @@ Gateways are pluggable. `IPaymentGateway` (with a `GatewayId`) is implemented in
 
 ## Mock gateways
 
-`mock-alpha` and `mock-beta` decline deterministically when the amount is `>= 10000.00` and approve anything lower
+`mock-alpha` and `mock-beta` are two instances of `MockGateway`. They decline deterministically when the amount is `>= 10000.00` and approve anything lower
 (`9999.99` succeeds, `10000.00` fails). Confirmation codes are prefixed `ALPHA-` and `BETA-`.
 
 ## Adding a gateway
 
-1. Add a class implementing `IPaymentGateway` in `backend/src/OrderProcessing.Infrastructure/Payments/`.
+1. Add a class implementing `IPaymentGateway` in `backend/src/OrderProcessing.Infrastructure/Payments/` (or, for
+   another mock, just a new `MockGateway(id, name, prefix)` instance).
 2. Add one line to `AddInfrastructure()`: `services.AddSingleton<IPaymentGateway, MyGateway>();`
 
 No other layer changes, and the frontend picks it up from `GET /api/v1/payment-gateways`. To remove a gateway, delete
-the registration line and the class.
+the registration line (and the class, if it has its own).
 
 ## Currencies
 

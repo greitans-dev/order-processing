@@ -12,10 +12,6 @@ public abstract record PaymentResult
     {
     }
 
-    public static PaymentResult Success(string confirmationCode) => new Approved(confirmationCode);
-
-    public static PaymentResult Failure(string reason) => new Declined(reason);
-
     public sealed record Approved(string ConfirmationCode) : PaymentResult;
 
     /// <param name="Reason">Explanation that is safe to show to the end user.</param>
